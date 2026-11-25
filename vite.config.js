@@ -21,11 +21,20 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version),
     __APP_COMMIT__: JSON.stringify(commit),
   },
+  // Own port, so this never collides with Gun Hands (5173). Browser tests use 5175 and 5176.
+  server: { port: 5174, strictPort: true },
   build: {
     // Phaser is one large module; don't warn about it on every build.
     chunkSizeWarningLimit: 2000,
   },
   test: {
     include: ['tests/**/*.test.js'],
+    coverage: {
+      provider: 'v8',
+      // All of src/, so untested files (scenes) show as 0% instead of being hidden.
+      include: ['src/**/*.js'],
+      reporter: ['text', 'html'],
+      reportsDirectory: 'coverage',
+    },
   },
 });

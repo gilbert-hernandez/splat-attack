@@ -4,6 +4,16 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.0.2] - 2026-11-24
+
+### Added
+
+- **Dev tooling** (SA-2): Prettier, ESLint, JSDoc type-checking and coverage with one `npm run check`; Playwright browser tests against dev and production builds, with videos; `npm run record`; `npm run release:check`; and GitHub Actions CI.
+
+### Changed
+
+- The dev server uses port 5174 (SA-2), so it can't collide with Gun Hands.
+
 ## [0.0.1] - 2026-11-24
 
 ### Added

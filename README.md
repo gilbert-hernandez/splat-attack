@@ -14,7 +14,29 @@ npm run build      # static production build into dist/
 npm run preview    # serve dist/ locally
 ```
 
-`dist/` runs from any static web server and any path. In `npm run dev`, each scene shows its name and `R` in a match opens Result.
+`dist/` runs from any static web server and any path. The dev server is at http://localhost:5174; each scene shows its name, and `R` in a match opens Result (dev only).
+
+### Code checks
+
+```bash
+npm run check          # format check, lint, type-check, unit tests; run before committing
+npm run format         # rewrite files in the project style (Prettier)
+npm run lint           # ESLint
+npm run typecheck      # type-check the JSDoc (tsc)
+npm run coverage       # unit-test coverage; HTML report in coverage/index.html
+```
+
+### Browser tests and videos
+
+```bash
+npx playwright install chromium   # once
+npm run e2e                       # browser tests against dev and production builds
+npm run record -- [out.webm]      # scripted gameplay video; needs `npm run dev` running
+```
+
+`npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock.
+
+GitHub Actions runs check, build and e2e on every push and pull request; a failed run keeps its report and videos for 14 days.
 
 ## Layout
 
@@ -26,6 +48,8 @@ src/assets/placeholders.js generated stand-ins for missing art
 src/assets/img/            david's PNGs go here
 src/scenes/                Boot → Preload → Title → ModeSelect → Match (+ UI), Pause, Result
 tests/                     unit tests
+e2e/                       browser tests
+scripts/                   recording and release check
 ASSETS.md                  the art spec
 PLAN.md                    the overall plan
 openspec/                  specs and changes
@@ -37,7 +61,7 @@ Name and size the PNG as listed in [ASSETS.md](ASSETS.md), copy it into `src/ass
 
 ## Version
 
-`package.json` is the only source; the title screen shows it. Each Dev ticket bumps it and adds a dated `CHANGELOG.md` section (`npm test` fails if they differ). After merging: annotated tag `v<version>`.
+`package.json` is the only source; the title screen shows it. Each Dev ticket bumps it and adds a dated `CHANGELOG.md` section (`npm test` fails if they differ). After merging to `master`, `npm run release:check` lists anything wrong; when it says ready, push the annotated tag `v<version>`.
 
 ## Workflow
 

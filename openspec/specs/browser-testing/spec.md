@@ -17,7 +17,7 @@ The project SHALL provide a command that starts this project's own server, runs 
 - **THEN** the tests still run against Splat Attack
 
 ### Requirement: Scene flow coverage
-Browser tests SHALL cover the boot to title flow, both modes, pause and resume, quitting, the result screen, window scaling, the version label, the placeholder fallback, the board view and every control.
+Browser tests SHALL cover the boot to title flow, both modes, pause and resume, quitting, the result screen, window scaling, the version label, the placeholder fallback, the board view, every control, the debug keys, and the loop from a top-out to the result and a new match.
 
 #### Scenario: Flow breaks
 - **WHEN** a change stops Pause from resuming the match
@@ -35,7 +35,7 @@ The game hook used by tests and the debug shortcuts SHALL exist only in developm
 - **THEN** `window.__GAME__` is undefined, the debug keys do nothing, and the title label is the plain version
 
 ### Requirement: Gameplay recording
-The project SHALL provide a command that plays a scripted route in a browser and saves a video.
+The project SHALL provide a command that plays a whole Endless match, from the title to a top-out, the result and a new match, in a browser and saves a video.
 
 #### Scenario: Record
 - **WHEN** a developer runs `npm run record` with the dev server running

@@ -31,5 +31,6 @@
 - [x] 5.1 Run `openspec validate add-endless-mode --strict`, `npm run check`, and `npm run e2e` twice; all pass
 - [x] 5.2 Manual check: run `npm run dev` and play Endless to a top-out; check that the speed-up is noticeable and fair, the match length, score and level on screen, GAME OVER, the result's numbers, Play again and Esc; then try each debug key, and end a Ladder match with R
   - _Verified by Gilbert 2026-11-25._
-- [ ] 5.3 Record the gameplay video and attach it to SA-6; verify it plays from the ticket
+- [x] 5.3 Record the gameplay video and attach it to SA-6; verify it plays from the ticket
+  - _Attached by Gilbert 2026-11-25 (sa-6-endless.webm, same size as the local file); playback in the ticket not checked by Claude._
 - [x] 5.4 Bump to 0.1.0 and add the CHANGELOG.md section for SA-6; verify `npm test` passes (after merge and tag, with Gilbert's OK: GitHub pre-release with the archive and checksum)

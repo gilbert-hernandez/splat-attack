@@ -36,7 +36,7 @@ The game SHALL go from loading to title to mode select to a match with a UI over
 
 #### Scenario: Reach the result screen during development
 - **WHEN** debug mode is on and the developer presses the result key in a match
-- **THEN** the Result screen opens and can return to the title
+- **THEN** the match ends, and the Result screen opens and can return to the title
 
 ### Requirement: Centralized configuration
 Display and gameplay tunables SHALL live in configuration modules outside scene code.

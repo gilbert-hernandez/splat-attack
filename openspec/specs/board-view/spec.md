@@ -48,7 +48,7 @@ Landing, falling and splatting SHALL be animated from engine events, counted in 
 
 #### Scenario: Match over
 - **WHEN** the match ends
-- **THEN** the final board stays on screen
+- **THEN** the final board stays on screen until the result opens
 
 ### Requirement: Bridges
 Blobs of one color at rest next to each other in visible rows SHALL be joined by a bridge.

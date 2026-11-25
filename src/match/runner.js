@@ -16,22 +16,28 @@ export default class MatchRunner {
    */
   constructor({ seed, readInput, onTick = () => {} }) {
     this.state = createState(seed);
+    /** Null once the state was edited: such a match can't be replayed. */
     this.replay = createReplay(seed);
     this.readInput = readInput;
     this.onTick = onTick;
     /** When true, only advance() ticks. */
     this.manual = false;
+    /** Frozen by a debug key: like manual. */
+    this.frozen = false;
+    /** Ticks run per tick owed (fast-forward). */
+    this.rate = 1;
     /** Ticks owed. */
     this.owed = 0;
   }
 
   /** @param {number} deltaMs frame time */
   update(deltaMs) {
-    if (this.manual) return;
-    this.owed += (deltaMs * CLOCK.ticksPerSecond) / 1000;
+    if (this.manual || this.frozen) return;
+    this.owed += (deltaMs * CLOCK.ticksPerSecond * this.rate) / 1000;
     const due = Math.floor(this.owed + EPSILON);
-    this.owed = due > CLOCK.maxTicksPerFrame ? 0 : this.owed - due;
-    this.advance(Math.min(due, CLOCK.maxTicksPerFrame));
+    const most = CLOCK.maxTicksPerFrame * this.rate;
+    this.owed = due > most ? 0 : this.owed - due;
+    this.advance(Math.min(due, most));
   }
 
   /**
@@ -42,8 +48,19 @@ export default class MatchRunner {
   advance(ticks, mask) {
     for (let i = 0; i < ticks; i++) {
       const input = mask ?? this.readInput();
-      recordInput(this.replay, this.state, input);
+      if (this.replay) recordInput(this.replay, this.state, input);
       this.onTick(this.state, step(this.state, input));
     }
+  }
+
+  /** Stops or restarts the clock, forgetting ticks owed. */
+  setFrozen(frozen) {
+    this.frozen = frozen;
+    this.owed = 0;
+  }
+
+  /** Call when the state was changed by anything but a tick. */
+  dropReplay() {
+    this.replay = null;
   }
 }

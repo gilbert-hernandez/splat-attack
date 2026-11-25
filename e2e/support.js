@@ -89,6 +89,16 @@ export function advance(page, ticks, mask = undefined) {
   );
 }
 
+/** Drop pairs straight down until the match ends, plus enough ticks for its animations. */
+export function advanceToEnd(page) {
+  return page.evaluate(() => {
+    const { runner, view } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+    for (let i = 0; i < 5000 && runner.state.phase !== 'over'; i++) runner.advance(1, 16);
+    runner.advance(40, 0);
+    view.draw();
+  });
+}
+
 /** A copy of the match state. */
 export function matchState(page) {
   return page.evaluate(() =>

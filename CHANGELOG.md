@@ -4,6 +4,21 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.1.0] - 2026-11-25
+
+Milestone M1 Core is complete: Endless plays from the title to a top-out, the result and a new match. All art is still generated placeholders.
+
+### Added
+
+- **Endless mode** (SA-6): falling speeds up every 10 pairs, with live score and level, a game-over message, and a result with score, level, pairs, longest chain and time. Play again or return to the title by button or key.
+- **Debug keys** (SA-6), dev builds only: set the next pair, load a board, freeze, step, fast-forward and force the end.
+- **Release archive** (SA-6): `npm run release:archive` writes the build archive and its SHA-256.
+
+### Changed
+
+- `npm run record` plays a whole Endless match (SA-6).
+- `R` in dev builds ends the match through the game-over message instead of jumping to the result (SA-6).
+
 ## [0.0.5] - 2026-11-25
 
 ### Added

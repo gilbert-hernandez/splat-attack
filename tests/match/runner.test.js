@@ -48,4 +48,40 @@ describe('match runner', () => {
     const copy = JSON.parse(JSON.stringify(runner.replay));
     expect(hashState(playReplay(copy))).toBe(hashState(runner.state));
   });
+
+  it('freezes, steps, and continues without catching up', () => {
+    const runner = new MatchRunner({ seed: 1, readInput: idle });
+    runner.update(40);
+    const { tick } = runner.state;
+    runner.setFrozen(true);
+    runner.update(1000);
+    expect(runner.state.tick).toBe(tick);
+    runner.advance(1);
+    expect(runner.state.tick).toBe(tick + 1);
+    runner.setFrozen(false);
+    runner.update(1);
+    expect(runner.state.tick).toBe(tick + 1);
+  });
+
+  it('keeps a true replay when frozen, stepped and fast-forwarded', () => {
+    const runner = new MatchRunner({ seed: 7, readInput: () => 16 });
+    runner.rate = 8;
+    for (let i = 0; i < 5; i++) runner.update(1000 / 60);
+    expect(runner.state.tick).toBe(40);
+    runner.setFrozen(true);
+    runner.advance(3);
+    runner.setFrozen(false);
+    runner.update(1000 / 60);
+    expect(runner.state.tick).toBe(51);
+    expect(hashState(playReplay(runner.replay))).toBe(hashState(runner.state));
+    runner.update(5000);
+    expect(runner.state.tick).toBe(51 + 8 * CLOCK.maxTicksPerFrame);
+  });
+
+  it('keeps ticking without a replay', () => {
+    const runner = new MatchRunner({ seed: 1, readInput: idle });
+    runner.dropReplay();
+    runner.advance(5);
+    expect([runner.replay, runner.state.tick]).toEqual([null, 5]);
+  });
 });

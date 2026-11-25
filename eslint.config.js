@@ -57,7 +57,7 @@ const viewRules = {
 
 export default [
   {
-    ignores: ['dist/', 'coverage/', 'test-results/', 'playwright-report/', 'videos/', 'art/', 'openspec/'],
+    ignores: ['dist/', 'coverage/', 'test-results/', 'playwright-report/', 'videos/', 'release/', 'art/', 'openspec/'],
   },
   js.configs.recommended,
   {

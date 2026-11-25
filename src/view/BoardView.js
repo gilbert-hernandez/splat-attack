@@ -15,6 +15,7 @@ export default class BoardView {
   constructor(scene, { x, frameKey, preview = false }) {
     this.scene = scene;
     this.x = x;
+    this.centerX = x + (BOARD.columns * BOARD.cell) / 2;
     /** @type {BoardModel | null} */
     this.model = null;
     const { columns, rows, cell, y, frameBorder, fill } = BOARD;

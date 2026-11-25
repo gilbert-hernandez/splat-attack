@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
-import { BOARD, CONTROLS, DEBUG } from '../config/index.js';
+import { BOARD, CONTROLS, DEBUG, DISPLAY, FLOW } from '../config/index.js';
+import DebugKeys from '../debug/debugKeys.js';
 import MatchInput from '../match/input.js';
 import MatchRunner from '../match/runner.js';
+import MatchStats from '../match/stats.js';
 import BoardView from '../view/BoardView.js';
 import { addSceneLabel } from './sceneLabel.js';
 
@@ -17,6 +19,7 @@ export default class MatchScene extends Phaser.Scene {
     this.mode = data?.mode === 'endless' ? 'endless' : 'ladder';
     this.elapsedMs = 0;
     this.pauseOpen = false;
+    this.finished = false;
   }
 
   create() {
@@ -27,7 +30,20 @@ export default class MatchScene extends Phaser.Scene {
       preview: true,
     });
     if (!solo) this.rivalView = new BoardView(this, { x: BOARD.rivalX, frameKey: 'board_frame_rival' });
+    this.gameOverText = this.add
+      .text(this.view.centerX, DISPLAY.height / 2, 'GAME\nOVER', {
+        fontFamily: FLOW.fontFamily,
+        fontSize: '48px',
+        fontStyle: 'bold',
+        align: 'center',
+        color: FLOW.textColor,
+        stroke: DISPLAY.backgroundColor,
+        strokeThickness: 8,
+      })
+      .setOrigin(0.5)
+      .setDepth(100);
     this.keys = new MatchInput();
+    this.debug = DEBUG.enabled ? new DebugKeys(this) : null;
     this.begin(crypto.getRandomValues(new Uint32Array(1))[0]);
     this.listen();
     addSceneLabel(this);
@@ -47,7 +63,9 @@ export default class MatchScene extends Phaser.Scene {
     keyboard.on(
       'keydown',
       once((event) => {
-        if (!event.repeat && !this.pauseOpen) this.keys.press(event.code);
+        if (this.pauseOpen) return;
+        if (!event.repeat) this.keys.press(event.code);
+        this.debug?.press(event);
       }),
     );
     keyboard.on(
@@ -55,7 +73,6 @@ export default class MatchScene extends Phaser.Scene {
       once((event) => this.keys.release(event.code)),
     );
     keyboard.on('keydown-ESC', () => this.openPause());
-    if (DEBUG.enabled) keyboard.on('keydown-R', () => this.finish());
 
     const release = () => this.keys.releaseAll();
     this.game.events.on(Phaser.Core.Events.BLUR, release);
@@ -65,12 +82,25 @@ export default class MatchScene extends Phaser.Scene {
   /** Starts a match on this seed, replacing any match in progress. */
   begin(seed) {
     this.keys.releaseAll();
+    this.debug?.reset();
+    this.stats = new MatchStats();
+    this.overTicks = 0;
+    this.gameOverText.setVisible(false);
     this.runner = new MatchRunner({
       seed,
       readInput: () => this.keys.next(),
-      onTick: (state, events) => this.view.tick(state, events),
+      onTick: (state, events) => this.tick(state, events),
     });
     this.view.show(this.runner.state);
+  }
+
+  tick(state, events) {
+    this.view.tick(state, events);
+    this.stats.add(events);
+    if (state.phase !== 'over') return;
+    this.gameOverText.setVisible(true);
+    // Counted in ticks, so pausing stops it.
+    if (this.overTicks++ === FLOW.gameOverTicks) this.finish();
   }
 
   update(_time, delta) {
@@ -81,7 +111,7 @@ export default class MatchScene extends Phaser.Scene {
   }
 
   openPause() {
-    if (this.pauseOpen) return;
+    if (this.pauseOpen || this.finished) return;
     this.pauseOpen = true;
     this.keys.releaseAll();
     this.scene.pause();
@@ -96,7 +126,9 @@ export default class MatchScene extends Phaser.Scene {
   }
 
   finish() {
+    if (this.finished) return;
+    this.finished = true;
     this.scene.stop('UI');
-    this.scene.start('Result', { mode: this.mode });
+    this.scene.start('Result', { mode: this.mode, stats: this.stats.summary(this.runner.state) });
   }
 }

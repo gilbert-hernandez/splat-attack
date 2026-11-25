@@ -14,7 +14,7 @@ npm run build      # static production build into dist/
 npm run preview    # serve dist/ locally
 ```
 
-`dist/` runs from any static web server and any path. The dev server is at http://localhost:5174; each scene shows its name, and `R` in a match opens Result (dev only).
+`dist/` runs from any static web server and any path. The dev server is at http://localhost:5174; dev builds show scene names and have [debug keys](#debug-keys).
 
 ### Code checks
 
@@ -47,12 +47,29 @@ Controls: A/D or ←/→ move, S or ↓ soft drop, Q/Z and E/X rotate, Esc pause
 
 `src/match/` turns keys and frame time into engine ticks. `src/view/` draws the state and its events: the models are pure and work out what to draw, counting ticks rather than time, and `BoardView` places sprites. Lint stops `src/view/` from importing anything that changes a match, and stored replays must give the same hashes when played through it.
 
+The level rises every 10 pairs and speeds up falling (`src/core/level.js`, values in `src/config/rules.js`). A top-out shows GAME OVER, then the result: Enter or Space plays again, Esc returns to the title.
+
+### Debug keys
+
+In a match, dev builds only (`src/debug/`, keys in `src/config/display.js`):
+
+| Key        | Does                                                              |
+| ---------- | ----------------------------------------------------------------- |
+| `1`–`5` ×2 | Sets the next pair: red, yellow, green, blue, purple; pivot first |
+| `B`        | Loads the next prepared board: 6-step chain, top-out, mid-game    |
+| `P`        | Freezes or unfreezes the clock                                    |
+| `.`        | Freezes and steps one tick                                        |
+| `F`        | Fast-forward (8×) on or off                                       |
+| `R`        | Forces the end                                                    |
+
+For the 6-step chain, move the pair to the left wall and drop it. Setting a pair, loading a board or forcing the end drops the match's replay.
+
 ### Browser tests and videos
 
 ```bash
 npx playwright install chromium   # once
 npm run e2e                       # browser tests against dev and production builds
-npm run record -- [out.webm]      # scripted gameplay video; needs `npm run dev` running
+npm run record -- [out.webm]      # video of a whole Endless match, about a minute; needs `npm run dev` running
 ```
 
 `npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock. For gameplay, `startStopped` starts a match on a seed with its clock stopped and `advance` runs an exact number of ticks.
@@ -65,7 +82,8 @@ GitHub Actions runs check, build and e2e on every push and pull request; a faile
 src/main.js                Phaser.Game config (960×540, FIT, pixelArt, no physics)
 src/config/                tunables (rules.js: the ones that affect results)
 src/core/                  the rules engine: pure, deterministic, no Phaser
-src/match/                 tick runner and keyboard input
+src/match/                 tick runner, keyboard input and stats
+src/debug/                 debug keys and boards (dev builds)
 src/view/                  board models (pure) and drawing
 src/assets/manifest.js     every graphic, plus validate()
 src/assets/placeholders.js generated stand-ins for missing art
@@ -85,7 +103,7 @@ Name and size the PNG as listed in [ASSETS.md](ASSETS.md), copy it into `src/ass
 
 ## Version
 
-`package.json` is the only source; the title screen shows it. Each Dev ticket bumps it and adds a dated `CHANGELOG.md` section (`npm test` fails if they differ). After merging to `master`, `npm run release:check` lists anything wrong; when it says ready, push the annotated tag `v<version>`.
+`package.json` is the only source; the title screen shows it. Each Dev ticket bumps it and adds a dated `CHANGELOG.md` section (`npm test` fails if they differ). After merging to `master`, `npm run release:check` lists anything wrong; when it says ready, push the annotated tag `v<version>`. For a milestone, `npm run release:archive` then writes `release/splat-attack-<version>.tar.gz` and its `.sha256` for the GitHub pre-release.
 
 ## Workflow
 

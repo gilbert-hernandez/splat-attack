@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import {
   advance,
+  advanceToEnd,
   clickButton,
   drawn,
   holdKey,
@@ -162,10 +163,10 @@ test('losing focus releases keys', async ({ page }) => {
   expect((await matchState(page)).pair.col).toBe(col);
 });
 
-test('a finished match stays on screen, and Quit and a new match work', async ({ page }) => {
+test('a finished match stays on screen until the result, and Quit and a new match work', async ({ page }) => {
   const problems = await openGame(page);
   await startStopped(page, 'endless');
-  await advance(page, 3000, SOFT_DROP);
+  await advanceToEnd(page);
   const state = await matchState(page);
   expect(state.phase).toBe('over');
   expect(await drawn(page, 'blobs')).toHaveLength(state.grid.slice(14).filter(Boolean).length);

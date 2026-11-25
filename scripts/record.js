@@ -29,44 +29,45 @@ try {
   const page = await context.newPage();
   const show = (ms = 1500) => page.waitForTimeout(ms);
 
-  // The route: title, a Ladder match with a pause, its result, then an Endless match.
+  /** Plays the running match with scripts/greedy.js, or straight down, through the normal inputs. */
+  const play = (greedy) =>
+    page.evaluate(async (useGreedy) => {
+      const url = '/scripts/greedy.js';
+      const { greedyInput, planPair } = await import(/* @vite-ignore */ url);
+      const { runner } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+      let pairs = 0;
+      let plan = null;
+      runner.readInput = () => {
+        const { state } = runner;
+        if (state.phase !== 'falling') return 0;
+        if (!useGreedy) return 16;
+        if (pairs !== state.pairs) {
+          pairs = state.pairs;
+          plan = planPair(state);
+        }
+        // One input in four, so moves can be followed; drops are held.
+        const input = greedyInput(state, plan);
+        return input === 16 || state.tick % 4 === 0 ? input : 0;
+      };
+    }, greedy);
+
+  // The route: title, an Endless match with a pause, a real top-out, the result and a new match.
   await openGame(page);
   await show();
-  await startMatch(page, 'ladder');
-  await show();
+  await startMatch(page, 'endless');
+  await play(true);
+  await show(10000);
   await openPause(page);
   await show();
   await clickButton(page, 'Pause', 'resumeButton');
-  await show();
-  await page.keyboard.press('r');
-  await waitForScene(page, 'Result');
-  await show();
-  await clickButton(page, 'Result', 'titleButton');
-  await waitForScene(page, 'Title');
-  await show(700);
-  // Play some pairs with the real keys: spread them over the board, turning some.
-  await startMatch(page, 'endless');
-  const press = async (key, ms = 60) => {
-    await page.keyboard.down(key);
-    await show(ms);
-    await page.keyboard.up(key);
-    await show(60);
-  };
-  for (const [move, times, turn] of [
-    ['KeyA', 3, ''],
-    ['KeyD', 3, 'KeyE'],
-    ['KeyA', 1, 'KeyQ'],
-    ['KeyD', 1, 'KeyX'],
-    ['KeyA', 2, 'KeyZ'],
-    ['KeyD', 2, ''],
-  ]) {
-    if (turn) await press(String(turn));
-    for (let i = 0; i < Number(times); i++) await press(String(move));
-    await show(500);
-    await press('KeyS', 450);
-    await show(600);
-  }
-  await show();
+  await show(30000);
+  await play(false);
+  await page.waitForFunction(() => window.__GAME__.scene.isActive('Result'), undefined, { timeout: 90000 });
+  await show(3500);
+  await page.keyboard.press('Enter');
+  await waitForScene(page, 'UI');
+  await play(true);
+  await show(6000);
 
   const video = page.video();
   await context.close();

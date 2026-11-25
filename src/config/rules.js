@@ -8,7 +8,11 @@ export const RULES = {
   nextPairs: 2,
   // Fall progress is counted in 1/256 of a row. Speeds must not exceed rowUnits.
   rowUnits: 256,
+  // Fall speed at level 1, added per level, and the most it can be (at most softDropSpeed).
   fallSpeed: 8,
+  fallSpeedPerLevel: 4,
+  maxFallSpeed: 128,
+  pairsPerLevel: 10,
   softDropSpeed: 128,
   // Each pair's lock budget: one spent per grounded tick, more per floor kick, never refilled.
   lockBudget: 30,

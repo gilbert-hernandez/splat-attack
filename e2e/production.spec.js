@@ -39,10 +39,10 @@ test('production has no hook, no debug keys, and the plain version label', async
     })
     .toContain('SCORE 0');
 
-  // R would open Result in dev. Esc still opening Pause proves the key input works.
-  await page.keyboard.press('r');
-  await page.waitForTimeout(300);
-  expect(await texts()).not.toContain('RESULT');
+  // No debug key acts: R would have opened Result by now in dev. Esc still opening Pause proves the key input works.
+  for (const key of ['1', '2', 'b', 'f', 'p', '.', 'r']) await page.keyboard.press(key);
+  await page.waitForTimeout(2500);
+  expect((await texts()).filter((t) => /RESULT|twice/.test(t))).toEqual([]);
   await page.keyboard.press('Escape');
   await expect.poll(texts).toContain('PAUSED');
   expect(await texts()).not.toContain('RESULT');

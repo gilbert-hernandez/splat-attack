@@ -28,9 +28,19 @@ export function compareVersions(a, b) {
  * @param {boolean} state.clean no uncommitted or untracked files
  * @param {string[]} state.localTags
  * @param {string[] | null} state.remoteTags null when origin can't be read
+ * @param {boolean} [state.tagIsHere] the version's tag exists and points at this commit, which is
+ *   fine when archiving it
  * @returns {string[]}
  */
-export function releaseProblems({ version, changelogVersion, branch, clean, localTags, remoteTags }) {
+export function releaseProblems({
+  version,
+  changelogVersion,
+  branch,
+  clean,
+  localTags,
+  remoteTags,
+  tagIsHere = false,
+}) {
   const problems = [];
   const tag = `v${version}`;
   if (!/^\d+\.\d+\.\d+$/.test(version)) return [`package.json version "${version}" is not x.y.z`];
@@ -39,9 +49,9 @@ export function releaseProblems({ version, changelogVersion, branch, clean, loca
   if (changelogVersion !== version) {
     problems.push(`CHANGELOG.md's newest version is ${changelogVersion ?? 'missing'}, but package.json is ${version}`);
   }
-  if (localTags.includes(tag)) problems.push(`${tag} is already tagged locally`);
+  if (localTags.includes(tag) && !tagIsHere) problems.push(`${tag} is already tagged locally`);
   if (remoteTags === null) problems.push("couldn't read the tags on origin");
-  else if (remoteTags.includes(tag)) problems.push(`${tag} is already tagged on origin`);
+  else if (remoteTags.includes(tag) && !tagIsHere) problems.push(`${tag} is already tagged on origin`);
 
   const released = [...localTags, ...(remoteTags ?? [])]
     .filter((t) => /^v\d+\.\d+\.\d+$/.test(t))

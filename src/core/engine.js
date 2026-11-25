@@ -1,5 +1,6 @@
 import { RULES } from '../config/rules.js';
 import { COLUMNS, EMPTY, applyGravity, cellAt, createGrid, setCell } from './grid.js';
+import { fallSpeedAt, levelAt } from './level.js';
 import { UP, fallPair, isGrounded, movePair, otherCell, rotatePair } from './pair.js';
 import { nextInt, seedRng } from './rng.js';
 import { findGroups, splatPoints } from './splat.js';
@@ -24,6 +25,7 @@ export const INPUT = { LEFT: 1, RIGHT: 2, ROTATE_CW: 4, ROTATE_CCW: 8, SOFT_DROP
  * @property {number} chain steps so far in the current chain
  * @property {number} chainPoints points so far in the current chain
  * @property {number} score
+ * @property {number} pairs pairs spawned so far, including the falling one
  */
 
 /**
@@ -56,6 +58,7 @@ export function createState(seed) {
     chain: 0,
     chainPoints: 0,
     score: 0,
+    pairs: 0,
   };
   while (state.queue.length < RULES.nextPairs) state.queue.push(drawPair(state));
   spawn(state);
@@ -91,7 +94,7 @@ function stepPair(state, input, events) {
   const turn = axis(input, INPUT.ROTATE_CCW, INPUT.ROTATE_CW);
   if (move !== 0) movePair(grid, pair, move);
   if (turn !== 0) rotatePair(grid, pair, turn);
-  fallPair(grid, pair, softDrop ? RULES.softDropSpeed : RULES.fallSpeed);
+  fallPair(grid, pair, softDrop ? RULES.softDropSpeed : fallSpeedAt(levelAt(state.pairs)));
 
   if (!isGrounded(grid, pair)) return;
   pair.budget = Math.max(0, pair.budget - 1);
@@ -149,14 +152,15 @@ function splat(state, groups, events) {
   events.push({ type: 'splat', chain: state.chain, groups, points });
 }
 
-/** Brings in the next pair, or ends the match if the spawn cell is blocked. */
-function spawn(state) {
+/** Brings in the next pair, or ends the match if the spawn cell is blocked. Exported for debug tools. */
+export function spawn(state) {
   if (cellAt(state.grid, SPAWN.col, SPAWN.row) !== EMPTY) {
     state.phase = 'over';
     return;
   }
   const [pivot, other] = state.queue.shift();
   state.queue.push(drawPair(state));
+  state.pairs++;
   state.pair = { pivot, other, ...SPAWN, orientation: UP, progress: 0, budget: RULES.lockBudget };
   state.phase = 'falling';
 }

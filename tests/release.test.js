@@ -34,6 +34,13 @@ describe('releaseProblems', () => {
     expect(problems[0]).toMatch(message);
   });
 
+  it('accepts its own tag only when it is on this commit', () => {
+    const tagged = { ...ready, localTags: ['v0.0.2'], remoteTags: ['v0.0.2'] };
+    expect(releaseProblems({ ...tagged, tagIsHere: true })).toEqual([]);
+    expect(releaseProblems(tagged)).toHaveLength(2);
+    expect(releaseProblems({ ...tagged, tagIsHere: true, clean: false })).toHaveLength(1);
+  });
+
   it('lists every problem at once', () => {
     expect(releaseProblems({ ...ready, clean: false, branch: 'x', changelogVersion: null })).toHaveLength(3);
   });

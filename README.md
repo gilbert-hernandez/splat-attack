@@ -41,6 +41,12 @@ npm run replays -- --generate    # also make new inputs, if a replay no longer c
 
 Review the diff: a changed `score` means scores moved.
 
+### Match and view
+
+Controls: A/D or ←/→ move, S or ↓ soft drop, Q/Z and E/X rotate, Esc pauses. Keys, repeat and clock settings are in `src/config/input.js`; drawing settings are in `src/config/view.js`.
+
+`src/match/` turns keys and frame time into engine ticks. `src/view/` draws the state and its events: the models are pure and work out what to draw, counting ticks rather than time, and `BoardView` places sprites. Lint stops `src/view/` from importing anything that changes a match, and stored replays must give the same hashes when played through it.
+
 ### Browser tests and videos
 
 ```bash
@@ -49,7 +55,7 @@ npm run e2e                       # browser tests against dev and production bui
 npm run record -- [out.webm]      # scripted gameplay video; needs `npm run dev` running
 ```
 
-`npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock.
+`npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock. For gameplay, `startStopped` starts a match on a seed with its clock stopped and `advance` runs an exact number of ticks.
 
 GitHub Actions runs check, build and e2e on every push and pull request; a failed run keeps its report and videos for 14 days.
 
@@ -59,6 +65,8 @@ GitHub Actions runs check, build and e2e on every push and pull request; a faile
 src/main.js                Phaser.Game config (960×540, FIT, pixelArt, no physics)
 src/config/                tunables (rules.js: the ones that affect results)
 src/core/                  the rules engine: pure, deterministic, no Phaser
+src/match/                 tick runner and keyboard input
+src/view/                  board models (pure) and drawing
 src/assets/manifest.js     every graphic, plus validate()
 src/assets/placeholders.js generated stand-ins for missing art
 src/assets/img/            david's PNGs go here

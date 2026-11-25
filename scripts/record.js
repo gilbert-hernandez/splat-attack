@@ -44,7 +44,28 @@ try {
   await clickButton(page, 'Result', 'titleButton');
   await waitForScene(page, 'Title');
   await show(700);
+  // Play some pairs with the real keys: spread them over the board, turning some.
   await startMatch(page, 'endless');
+  const press = async (key, ms = 60) => {
+    await page.keyboard.down(key);
+    await show(ms);
+    await page.keyboard.up(key);
+    await show(60);
+  };
+  for (const [move, times, turn] of [
+    ['KeyA', 3, ''],
+    ['KeyD', 3, 'KeyE'],
+    ['KeyA', 1, 'KeyQ'],
+    ['KeyD', 1, 'KeyX'],
+    ['KeyA', 2, 'KeyZ'],
+    ['KeyD', 2, ''],
+  ]) {
+    if (turn) await press(String(turn));
+    for (let i = 0; i < Number(times); i++) await press(String(move));
+    await show(500);
+    await press('KeyS', 450);
+    await show(600);
+  }
   await show();
 
   const video = page.video();

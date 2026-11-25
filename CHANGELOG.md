@@ -4,6 +4,12 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.0.5] - 2026-11-25
+
+### Added
+
+- **Board view and controls** (SA-5): matches are visible and playable for the first time. Smooth falls, landings, splats and bridges drawn from engine events, a ghost, a preview of the next two pairs, and keyboard control with held-key repeat. Browser tests advance exact ticks, and stored replays are checked through the view.
+
 ## [0.0.4] - 2026-11-25
 
 ### Added

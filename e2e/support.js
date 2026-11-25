@@ -66,3 +66,73 @@ export async function openPause(page) {
     return scene.isActive('Pause') && scene.getScene('Pause').ready;
   });
 }
+
+/** Start a match on a seed with its clock stopped, so only advance() ticks it. */
+export async function startStopped(page, mode, seed = 1) {
+  await startMatch(page, mode);
+  await page.evaluate((s) => {
+    const match = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+    match.begin(s);
+    match.runner.manual = true;
+  }, seed);
+}
+
+/** Run exactly `ticks` ticks now and draw. With a mask, the keyboard isn't read. */
+export function advance(page, ticks, mask = undefined) {
+  return page.evaluate(
+    ([n, m]) => {
+      const match = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+      match.runner.advance(n, m ?? undefined);
+      match.view.draw();
+    },
+    [ticks, mask],
+  );
+}
+
+/** A copy of the match state. */
+export function matchState(page) {
+  return page.evaluate(() =>
+    structuredClone(/** @type {any} */ (window.__GAME__.scene.getScene('Match')).runner.state),
+  );
+}
+
+/** Change the stopped match's state (Object.assign) and show it. */
+export function setState(page, changes) {
+  return page.evaluate((c) => {
+    const match = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+    Object.assign(match.runner.state, c);
+    match.view.show(match.runner.state);
+  }, changes);
+}
+
+/** What a pool of the player's board shows: ghost, blobs, bridges, pair or next. */
+export function drawn(page, pool) {
+  return page.evaluate((name) => {
+    const { view } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+    return view.pools[name].active().map((s) => ({
+      key: s.texture.key,
+      x: s.x,
+      y: s.y,
+      cut: s.isCropped ? s._crop.y : 0,
+      visible: s.visible,
+    }));
+  }, pool);
+}
+
+/** Hold a key down until the match has seen it. */
+export async function holdKey(page, code) {
+  await page.keyboard.down(code);
+  await page.waitForFunction(
+    (c) => /** @type {any} */ (window.__GAME__.scene.getScene('Match')).keys.held.includes(c),
+    code,
+  );
+}
+
+/** Release a key and wait until the match has seen it. */
+export async function releaseKey(page, code) {
+  await page.keyboard.up(code);
+  await page.waitForFunction(
+    (c) => !(/** @type {any} */ (window.__GAME__.scene.getScene('Match')).keys.held.includes(c)),
+    code,
+  );
+}

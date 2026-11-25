@@ -35,6 +35,26 @@ const pureRules = {
   ],
 };
 
+// Drawing can't change the rules: the view may import only what reads the state.
+const readOnly = 'The view only reads the match state.';
+const readers = ['COLUMNS', 'ROWS', 'EMPTY', 'cellAt', 'isGrounded', 'otherCell', 'landingCells'];
+const viewRules = {
+  'no-restricted-imports': [
+    'error',
+    {
+      patterns: [
+        { regex: '/core/', allowImportNames: readers, message: readOnly },
+        { regex: '/(match|scenes|ai)/', message: readOnly },
+      ],
+    },
+  ],
+  'no-restricted-syntax': [
+    'error',
+    { selector: 'ImportExpression', message: readOnly },
+    { selector: 'ExportAllDeclaration', message: readOnly },
+  ],
+};
+
 export default [
   {
     ignores: ['dist/', 'coverage/', 'test-results/', 'playwright-report/', 'videos/', 'art/', 'openspec/'],
@@ -56,6 +76,7 @@ export default [
     files: ['src/config/rules.js'],
     rules: { 'no-restricted-imports': ['error', { patterns: [{ regex: '.', message: purity }] }] },
   },
+  { files: ['src/view/**/*.js'], rules: viewRules },
   // Unit tests run in Node (Vitest) against pure modules.
   { files: ['tests/**/*.js'], languageOptions: { globals: globals.node } },
   // Playwright specs run in Node but pass callbacks into the page.

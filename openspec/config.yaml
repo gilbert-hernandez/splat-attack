@@ -1,0 +1,43 @@
+schema: spec-driven
+
+context: |
+  Project: "Splat Attack" — a single-player, score-chasing falling-pair versus puzzle game. Goal right now is a playable browser DEMO.
+  Team: Gilbert (all code) and david (all graphics, made in Adobe tools). Tracked in Vikunja project "Splat Attack" (identifier SA)
+  at https://tasks.hernandez.solutions. Every code change maps to exactly one SA ticket; proposal.md must link it
+  (e.g. "Vikunja: SA-2") and the ticket must name the change. PLAN.md has the overall plan.
+
+  Originality: the genre's mechanics only. Never use Mean Bean Machine or Puyo Puyo names, characters, art, layouts, stages,
+  music, sounds, dialogue, or score/attack tables.
+
+  Gameplay:
+  - 7x12 visible board + 2 hidden rows, 32 px cells, 5 blob colors. Connect 4+ to splat; gravity chains.
+  - The Wall: splats stain the cells behind them; splatting on a matching stain adds score and attack power.
+  - Gunk (junk) is cracked by one adjacent splat and cleared by a second. Paint meter move: Rinse or Bomb.
+  - Modes: Ladder (5 CPU rivals per lap, harder each lap, first loss ends the run) and Endless. Both scored, never mixed.
+  - SCORE is the goal. A sitewide leaderboard comes after the demo: run records must be replayable to verify a score.
+  - CPU rivals must play differently every match (seeded per-match variation, mid-match adaptation, no scripted moves),
+    with strength held in a band so scores stay fair.
+  - Not in the demo: leaderboard, accounts, local or online multiplayer, touch.
+
+  Tech stack: Phaser 4 (pinned exact version) + Vite, plain modern JavaScript (ES modules). Static build only (no backend).
+  src/core/ and src/ai/ are pure: no Phaser, no Math.random, no clock; integer math; seeded RNG; fixed 60 Hz ticks.
+  Same seed + inputs = same match in browsers and Node. Scenes only render engine state and events.
+  Scenes: Boot, Preload, Title, ModeSelect, Match, UI (overlay on Match), Pause, Result.
+  Tunables live in src/config/, not inline.
+
+  Versioning: SemVer 0.x, package.json is the only source. Each Dev ticket bumps the patch; the last ticket of a milestone bumps
+  the minor. Every bump has a dated CHANGELOG.md section naming its SA ticket and an annotated tag after merge.
+  rulesVersion rises with any change that affects scores or bot behavior.
+
+  Art pipeline (placeholder-first): every asset is referenced by key through one manifest; missing files become generated
+  placeholders of the correct size. Files: sa_<category>_<name>_<anim>.png, transparent PNG, single-row strips, no padding,
+  nearest-neighbor. ASSETS.md is the source of truth for the art spec.
+
+rules:
+  proposal:
+    - Link the Vikunja ticket (SA-<n>) and state the target version in the Why section.
+    - Include a Non-goals section.
+  tasks:
+    - Each task should be completable in under 2 hours.
+    - Include a manual verification task (run the dev server and describe what to check in the browser).
+    - The last task bumps package.json and adds the CHANGELOG.md section.

@@ -33,3 +33,10 @@ Stored replays SHALL be checked in Node and in Chromium against their expected s
 #### Scenario: Intended change
 - **WHEN** a developer runs `npm run replays`
 - **THEN** expected values are rewritten from the stored inputs
+
+### Requirement: Replays through the view
+Stored replays SHALL give the same score and hashes when played in the Match scene with rendering as without it.
+
+#### Scenario: Played with the view
+- **WHEN** the browser tests play a stored replay in the Match scene
+- **THEN** its result equals the stored expected values, and the drawn board equals the final grid's visible rows

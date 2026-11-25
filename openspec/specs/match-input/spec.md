@@ -43,7 +43,7 @@ The match SHALL advance 60 ticks per second of real time at any display rate. Af
 - **THEN** the match doesn't skip ahead by that time
 
 ### Requirement: Pausing releases keys
-While paused the match SHALL NOT advance. Pausing or losing window focus SHALL release every key and drop presses not yet used.
+While paused the match SHALL NOT advance. Pausing or losing window focus SHALL release every key and touch, and drop presses and gestures not yet used.
 
 #### Scenario: Key released while paused
 - **WHEN** a move key is held, the match is paused, the key is released and the match resumes

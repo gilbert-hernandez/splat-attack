@@ -1,0 +1,68 @@
+import { RULES } from '../config/rules.js';
+import { COLUMNS, EMPTY, ROWS, cellAt } from './grid.js';
+
+// Matching and scoring.
+
+/**
+ * @typedef {object} Group
+ * @property {number} color
+ * @property {{col: number, row: number}[]} cells
+ */
+
+/**
+ * Every group big enough to splat, in scan order (left to right, top to bottom). Hidden rows are
+ * skipped: players can't see those blobs, so they don't match or connect a group.
+ * @param {number[]} grid
+ * @returns {Group[]}
+ */
+export function findGroups(grid) {
+  const seen = new Array(grid.length).fill(false);
+  const groups = [];
+  for (let row = RULES.hiddenRows; row < ROWS; row++) {
+    for (let col = 0; col < COLUMNS; col++) {
+      const color = cellAt(grid, col, row);
+      if (color === EMPTY || seen[row * COLUMNS + col]) continue;
+      const cells = flood(grid, col, row, seen);
+      if (cells.length >= RULES.groupSize) groups.push({ color, cells });
+    }
+  }
+  return groups;
+}
+
+/** The cells connected to one, marking them as seen. */
+function flood(grid, startCol, startRow, seen) {
+  const color = cellAt(grid, startCol, startRow);
+  const cells = [];
+  const visit = (col, row) => {
+    if (col < 0 || col >= COLUMNS || row < RULES.hiddenRows || row >= ROWS) return;
+    if (seen[row * COLUMNS + col] || cellAt(grid, col, row) !== color) return;
+    seen[row * COLUMNS + col] = true;
+    cells.push({ col, row });
+  };
+  visit(startCol, startRow);
+  for (let i = 0; i < cells.length; i++) {
+    const { col, row } = cells[i];
+    visit(col + 1, row);
+    visit(col, row + 1);
+    visit(col - 1, row);
+    visit(col, row - 1);
+  }
+  return cells;
+}
+
+/**
+ * Points for one chain step.
+ * @param {Group[]} groups
+ * @param {number} chain the step's number, from 1
+ */
+export function splatPoints(groups, chain) {
+  const { blobPoints, extraBlobPoints, colorPercent, chainPercent, chainGrowth } = RULES.scoring;
+  let base = 0;
+  for (const { cells } of groups) {
+    base += blobPoints * cells.length + extraBlobPoints * (cells.length - RULES.groupSize);
+  }
+  const colors = new Set(groups.map((g) => g.color)).size;
+  const color = 100 + colorPercent * (colors - 1);
+  const multiplier = chainPercent * chain + chainGrowth * chain * (chain - 1);
+  return Math.floor((base * color * multiplier) / 10000);
+}

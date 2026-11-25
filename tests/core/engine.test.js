@@ -277,10 +277,11 @@ describe('locking and settling', () => {
 });
 
 describe('top-out', () => {
-  const column = (rows, line) => new Array(rows).fill(line).join('\n');
+  // Cycles the lines, so the columns themselves don't splat.
+  const column = (rows, ...cycle) => Array.from({ length: rows }, (_, i) => cycle[i % cycle.length]).join('\n');
 
   it('ends when the spawn cell is blocked after a settle, then never changes', () => {
-    const state = stateWith(column(11, '...y...'));
+    const state = stateWith(column(11, '...y...', '...g...'));
     step(state, SOFT);
     until(state, (s) => s.phase !== 'settling');
     expect(state.phase).toBe('over');
@@ -291,13 +292,13 @@ describe('top-out', () => {
   });
 
   it('keeps blobs in the hidden rows', () => {
-    const state = stateWith(column(11, '...y...'));
+    const state = stateWith(column(11, '...y...', '...g...'));
     step(state, SOFT);
     expect(show(state).split('\n').slice(0, 3)).toEqual(['.......', '...b...', '...r...']);
   });
 
   it('continues with other columns full', () => {
-    const state = stateWith(column(14, 'yyy.yyy'));
+    const state = stateWith(column(14, 'rpr.rpr', 'gyg.gyg'));
     until(state, landed, SOFT);
     until(state, (s) => s.phase !== 'settling');
     expect(state.phase).toBe('falling');
@@ -305,7 +306,7 @@ describe('top-out', () => {
 });
 
 describe('determinism', () => {
-  it('gives equal, legal, integer states over random matches', () => {
+  it('gives equal, legal, integer states over random matches', { timeout: 60000 }, () => {
     for (let seed = 0; seed < 60; seed++) {
       const a = createState(seed);
       const b = createState(seed);
@@ -335,13 +336,15 @@ describe('determinism', () => {
   });
 });
 
-function assertLegal({ grid, pair, tick }) {
+function assertLegal({ grid, pair, tick, phase }) {
   if (pair) {
     const other = otherCell(pair);
     if (!isFree(grid, pair.col, pair.row) || !isFree(grid, other.col, other.row)) {
       throw new Error(`Overlap at tick ${tick}:\n${renderBoard(grid)}`);
     }
   }
+  // Splatted blobs leave gaps until the wait ends.
+  if (phase === 'splatting') return;
   for (let col = 0; col < COLUMNS; col++) {
     for (let row = 1; row < ROWS; row++) {
       if (cellAt(grid, col, row) === EMPTY && cellAt(grid, col, row - 1) !== EMPTY) {

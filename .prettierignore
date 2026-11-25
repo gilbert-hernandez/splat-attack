@@ -9,3 +9,4 @@ art/
 openspec/
 package-lock.json
 PLAN.md
+tests/core/replays/

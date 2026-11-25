@@ -14,4 +14,17 @@ export const RULES = {
   lockBudget: 30,
   floorKickCost: 8,
   settleTicks: 12,
+  // How long a splat holds before blobs fall.
+  splatTicks: 24,
+  groupSize: 4,
+  scoring: {
+    blobPoints: 20,
+    // Per blob past groupSize.
+    extraBlobPoints: 15,
+    // Added for each color past the first in one chain step.
+    colorPercent: 50,
+    // Chain step k multiplies by chainPercent * k + chainGrowth * k * (k - 1) percent.
+    chainPercent: 100,
+    chainGrowth: 25,
+  },
 };

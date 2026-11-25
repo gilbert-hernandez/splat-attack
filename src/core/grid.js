@@ -25,8 +25,12 @@ export function isFree(grid, col, row) {
   return col >= 0 && col < COLUMNS && row >= 0 && row < ROWS && cellAt(grid, col, row) === EMPTY;
 }
 
-/** Drops every blob, in place, until it rests on the floor or another blob. */
+/**
+ * Drops every blob, in place, until it rests on the floor or another blob.
+ * @returns {{col: number, from: number, to: number, color: number}[]} the blobs that moved
+ */
 export function applyGravity(grid) {
+  const falls = [];
   for (let col = 0; col < COLUMNS; col++) {
     let target = ROWS - 1;
     for (let row = ROWS - 1; row >= 0; row--) {
@@ -34,7 +38,9 @@ export function applyGravity(grid) {
       if (value === EMPTY) continue;
       setCell(grid, col, row, EMPTY);
       setCell(grid, col, target, value);
+      if (target !== row) falls.push({ col, from: row, to: target, color: value });
       target--;
     }
   }
+  return falls;
 }

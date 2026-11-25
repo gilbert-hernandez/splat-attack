@@ -4,6 +4,12 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.0.4] - 2026-11-25
+
+### Added
+
+- **Splat rules** (SA-4): four or more connected blobs of one color splat, gravity chains, and scoring by size, colors and chain step. The engine reports events for rendering. Not visible in the game yet. Match replays with state hashes, and stored replays checked in Node and Chromium (`npm run replays`).
+
 ## [0.0.3] - 2026-11-25
 
 ### Added

@@ -1,7 +1,7 @@
 {
   "name": "splat-attack",
   "private": true,
-  "version": "0.0.3",
+  "version": "0.0.4",
   "type": "module",
   "description": "Splat Attack: a score-chasing falling-pair versus puzzle game (Phaser 4 + Vite).",
   "license": "MIT",
@@ -18,6 +18,7 @@
     "typecheck": "tsc -p jsconfig.json",
     "coverage": "vitest run --coverage",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test",
+    "replays": "node scripts/replays.js",
     "release:check": "node scripts/release-check.js"
   },
   "dependencies": {

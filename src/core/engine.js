@@ -2,6 +2,7 @@ import { RULES } from '../config/rules.js';
 import { COLUMNS, EMPTY, applyGravity, cellAt, createGrid, setCell } from './grid.js';
 import { UP, fallPair, isGrounded, movePair, otherCell, rotatePair } from './pair.js';
 import { nextInt, seedRng } from './rng.js';
+import { findGroups, splatPoints } from './splat.js';
 
 // The rules engine: createState(seed) starts a match, step(state, input) advances it one tick.
 // State is plain JSON data, all integers, so it can be copied, compared and replayed.
@@ -9,7 +10,7 @@ import { nextInt, seedRng } from './rng.js';
 /** Input bits for one tick. Move and rotate act once per tick they're set; opposites cancel. */
 export const INPUT = { LEFT: 1, RIGHT: 2, ROTATE_CW: 4, ROTATE_CCW: 8, SOFT_DROP: 16 };
 
-/** @typedef {'falling' | 'settling' | 'over'} Phase */
+/** @typedef {'falling' | 'settling' | 'splatting' | 'over'} Phase */
 
 /**
  * @typedef {object} State
@@ -19,7 +20,20 @@ export const INPUT = { LEFT: 1, RIGHT: 2, ROTATE_CW: 4, ROTATE_CCW: 8, SOFT_DROP
  * @property {import('./pair.js').Pair | null} pair the falling pair (null unless falling)
  * @property {number[][]} queue next pairs, each [pivot, other]
  * @property {number} rng piece stream
- * @property {number} settleLeft ticks left in the settling phase
+ * @property {number} wait ticks left in the settling or splatting phase
+ * @property {number} chain steps so far in the current chain
+ * @property {number} chainPoints points so far in the current chain
+ * @property {number} score
+ */
+
+/**
+ * What happened in a tick, for rendering. Events aren't part of the state. A splat's blobs leave
+ * the grid at once; a settle's falls start at once, and the grid already has their end positions.
+ * @typedef {{type: 'lock', cells: {col: number, row: number, color: number}[]}
+ *   | {type: 'settle', falls: {col: number, from: number, to: number, color: number}[]}
+ *   | {type: 'splat', chain: number, groups: import('./splat.js').Group[], points: number}
+ *   | {type: 'chainEnd', chain: number, points: number}
+ *   | {type: 'over', score: number}} Event
  */
 
 // The center column's top visible cell. A match ends when it's occupied after a settle.
@@ -38,7 +52,10 @@ export function createState(seed) {
     pair: null,
     queue: [],
     rng: seedRng(seed),
-    settleLeft: 0,
+    wait: 0,
+    chain: 0,
+    chainPoints: 0,
+    score: 0,
   };
   while (state.queue.length < RULES.nextPairs) state.queue.push(drawPair(state));
   spawn(state);
@@ -49,19 +66,25 @@ export function createState(seed) {
  * Advances the state one tick, in place.
  * @param {State} state
  * @param {number} [input] INPUT bits
+ * @returns {Event[]}
  */
 export function step(state, input = 0) {
-  if (state.phase === 'over') return;
+  /** @type {Event[]} */
+  const events = [];
+  if (state.phase === 'over') return events;
   state.tick++;
-  if (state.phase === 'settling') {
-    state.settleLeft--;
-    if (state.settleLeft <= 0) spawn(state);
-    return;
+  if (state.phase === 'falling') {
+    stepPair(state, input, events);
+    return events;
   }
-  stepPair(state, input);
+  state.wait--;
+  if (state.wait > 0) return events;
+  if (state.phase === 'splatting') settle(state, events);
+  else resolve(state, events);
+  return events;
 }
 
-function stepPair(state, input) {
+function stepPair(state, input, events) {
   const { grid, pair } = state;
   const softDrop = (input & INPUT.SOFT_DROP) !== 0;
   const move = axis(input, INPUT.LEFT, INPUT.RIGHT);
@@ -72,7 +95,7 @@ function stepPair(state, input) {
 
   if (!isGrounded(grid, pair)) return;
   pair.budget = Math.max(0, pair.budget - 1);
-  if (softDrop || pair.budget === 0) lock(state);
+  if (softDrop || pair.budget === 0) lock(state, events);
 }
 
 /** -1, 0 or 1 from a pair of opposite input bits. */
@@ -80,15 +103,50 @@ function axis(input, negative, positive) {
   return ((input & positive) !== 0 ? 1 : 0) - ((input & negative) !== 0 ? 1 : 0);
 }
 
-function lock(state) {
-  const { grid, pair } = state;
-  const other = otherCell(pair);
-  setCell(grid, pair.col, pair.row, pair.pivot);
-  setCell(grid, other.col, other.row, pair.other);
-  applyGravity(grid);
+function lock(state, events) {
+  const { pair } = state;
+  const cells = [
+    { col: pair.col, row: pair.row, color: pair.pivot },
+    { ...otherCell(pair), color: pair.other },
+  ];
+  for (const { col, row, color } of cells) setCell(state.grid, col, row, color);
   state.pair = null;
+  events.push({ type: 'lock', cells });
+  settle(state, events);
+}
+
+/** Lets every blob fall, then waits out the settle time. */
+function settle(state, events) {
+  events.push({ type: 'settle', falls: applyGravity(state.grid) });
   state.phase = 'settling';
-  state.settleLeft = RULES.settleTicks;
+  state.wait = RULES.settleTicks;
+}
+
+/** After a settle: splats the next chain step, or ends the chain and brings in the next pair. */
+function resolve(state, events) {
+  const groups = findGroups(state.grid);
+  if (groups.length > 0) {
+    splat(state, groups, events);
+    return;
+  }
+  if (state.chain > 0) events.push({ type: 'chainEnd', chain: state.chain, points: state.chainPoints });
+  state.chain = 0;
+  state.chainPoints = 0;
+  spawn(state);
+  if (state.phase === 'over') events.push({ type: 'over', score: state.score });
+}
+
+function splat(state, groups, events) {
+  for (const { cells } of groups) {
+    for (const { col, row } of cells) setCell(state.grid, col, row, EMPTY);
+  }
+  state.chain++;
+  const points = splatPoints(groups, state.chain);
+  state.chainPoints += points;
+  state.score += points;
+  state.phase = 'splatting';
+  state.wait = RULES.splatTicks;
+  events.push({ type: 'splat', chain: state.chain, groups, points });
 }
 
 /** Brings in the next pair, or ends the match if the spawn cell is blocked. */

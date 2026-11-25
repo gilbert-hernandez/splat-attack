@@ -28,9 +28,18 @@ npm run coverage       # unit-test coverage; HTML report in coverage/index.html
 
 ### Engine
 
-`createState(seed)` starts a match and `step(state, input)` advances it one tick (60 per second); `input` combines the `INPUT` bits. The same seed and inputs always give the same match. Lint fails if `src/core/` or `src/ai/` uses Phaser, randomness, the clock, browser globals or non-integer literals.
+`createState(seed)` starts a match and `step(state, input)` advances it one tick (60 per second) and returns that tick's events (lock, settle, splat, chain end, over) for rendering; `input` combines the `INPUT` bits. The same seed and inputs always give the same match. Lint fails if `src/core/` or `src/ai/` uses Phaser, randomness, the clock, browser globals or non-integer literals.
 
 Engine tests draw boards as text with `tests/core/fixtures.js`: `.` is empty, letters are colors (`r y g b p`), and the falling pair shows in uppercase.
+
+Replays (`src/core/replay.js`) store a match's seed and inputs. The ones in `tests/core/replays/` run in `npm test` and, through the browser tests, in Chromium; any change to the engine's state or results fails them. If the change is intended:
+
+```bash
+npm run replays                  # replay the stored inputs and rewrite their expected results
+npm run replays -- --generate    # also make new inputs, if a replay no longer covers its case
+```
+
+Review the diff: a changed `score` means scores moved.
 
 ### Browser tests and videos
 
@@ -56,7 +65,7 @@ src/assets/img/            david's PNGs go here
 src/scenes/                Boot → Preload → Title → ModeSelect → Match (+ UI), Pause, Result
 tests/                     unit tests
 e2e/                       browser tests
-scripts/                   recording and release check
+scripts/                   recording, stored replays and release check
 ASSETS.md                  the art spec
 PLAN.md                    the overall plan
 openspec/                  specs and changes

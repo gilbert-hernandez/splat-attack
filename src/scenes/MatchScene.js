@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CONTROLS, DEBUG, DISPLAY, FLOW } from '../config/index.js';
 import DebugKeys from '../debug/debugKeys.js';
 import { onLayout } from '../layout/manager.js';
+import TouchGestures from '../match/gestures.js';
 import MatchInput from '../match/input.js';
 import MatchRunner from '../match/runner.js';
 import MatchStats from '../match/stats.js';
@@ -40,6 +41,7 @@ export default class MatchScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(100);
     this.keys = new MatchInput();
+    this.touch = new TouchGestures();
     this.debug = DEBUG.enabled ? new DebugKeys(this) : null;
     this.begin(crypto.getRandomValues(new Uint32Array(1))[0]);
     this.listen();
@@ -54,6 +56,8 @@ export default class MatchScene extends Phaser.Scene {
     this.view.place(player);
     this.rivalView?.place(match.ladder.rival);
     this.gameOverText.setPosition(gameOver.x, gameOver.y);
+    // Positions shift under the finger.
+    this.touch.releaseAll();
     if (rotated) this.openPause();
   }
 
@@ -81,21 +85,50 @@ export default class MatchScene extends Phaser.Scene {
     );
     keyboard.on('keydown-ESC', () => this.openPause());
 
-    const release = () => this.keys.releaseAll();
+    this.listenToTouch();
+
+    const release = () => this.releaseInput();
     this.game.events.on(Phaser.Core.Events.BLUR, release);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.game.events.off(Phaser.Core.Events.BLUR, release));
   }
 
+  listenToTouch() {
+    this.input.on('pointerdown', (pointer, over) => {
+      if (this.pauseOpen || !pointer.wasTouch || over.length > 0) return;
+      const { gameSize, displaySize } = this.scale;
+      this.touch.begin(pointer.id, pointer.x, pointer.y, displaySize.width / gameSize.width);
+    });
+    this.input.on('pointermove', (pointer) => this.touch.move(pointer.id, pointer.x, pointer.y));
+    const lift = (pointer) => {
+      // Phaser reports a cancelled touch as a release.
+      if (pointer.wasCanceled) {
+        this.touch.cancel(pointer.id);
+        return;
+      }
+      // Its last move may not have been reported.
+      this.touch.move(pointer.id, pointer.x, pointer.y);
+      this.touch.end(pointer.id);
+    };
+    this.input.on('pointerup', lift);
+    this.input.on('pointerupoutside', lift);
+  }
+
+  /** Forgets every key and touch. */
+  releaseInput() {
+    this.keys.releaseAll();
+    this.touch.releaseAll();
+  }
+
   /** Starts a match on this seed, replacing any match in progress. */
   begin(seed) {
-    this.keys.releaseAll();
+    this.releaseInput();
     this.debug?.reset();
     this.stats = new MatchStats();
     this.overTicks = 0;
     this.gameOverText.setVisible(false);
     this.runner = new MatchRunner({
       seed,
-      readInput: () => this.keys.next(),
+      readInput: () => this.keys.next() | this.touch.next(),
       onTick: (state, events) => this.tick(state, events),
     });
     this.view.show(this.runner.state);
@@ -104,6 +137,7 @@ export default class MatchScene extends Phaser.Scene {
   tick(state, events) {
     this.view.tick(state, events);
     this.stats.add(events);
+    if (events.some(({ type }) => type === 'lock')) this.touch.lock();
     if (state.phase !== 'over') return;
     this.gameOverText.setVisible(true);
     // Counted in ticks, so pausing stops it.
@@ -120,7 +154,7 @@ export default class MatchScene extends Phaser.Scene {
   openPause() {
     if (this.pauseOpen || this.finished) return;
     this.pauseOpen = true;
-    this.keys.releaseAll();
+    this.releaseInput();
     this.scene.pause();
     this.scene.launch('Pause');
   }
@@ -128,7 +162,7 @@ export default class MatchScene extends Phaser.Scene {
   /** Called by Pause once it is closing. */
   closePause() {
     this.pauseOpen = false;
-    this.keys.releaseAll();
+    this.releaseInput();
     this.scene.resume();
   }
 

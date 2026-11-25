@@ -4,6 +4,12 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.1.2] - 2026-11-25
+
+### Added
+
+- **Touch gestures** (SA-27): drag sideways to move, tap to rotate clockwise, drag down to soft drop. Each drag keeps one axis, and a lock ends a drop. Touch makes the same inputs as keys, so scores and replays are unchanged. On-screen buttons come in SA-28.
+
 ## [0.1.1] - 2026-11-25
 
 ### Added

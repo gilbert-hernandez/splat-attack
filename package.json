@@ -1,7 +1,7 @@
 {
   "name": "splat-attack",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "Splat Attack: a score-chasing falling-pair versus puzzle game (Phaser 4 + Vite).",
   "license": "MIT",

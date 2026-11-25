@@ -45,7 +45,9 @@ Review the diff: a changed `score` means scores moved.
 
 Controls: A/D or ←/→ move, S or ↓ soft drop, Q/Z and E/X rotate, Esc pauses. Keys, repeat and clock settings are in `src/config/input.js`; drawing settings are in `src/config/view.js`.
 
-`src/match/` turns keys and frame time into engine ticks. `src/view/` draws the state and its events: the models are pure and work out what to draw, counting ticks rather than time, and `BoardView` places sprites. Lint stops `src/view/` from importing anything that changes a match, and stored replays must give the same hashes when played through it.
+On a touch screen, drag sideways to move, tap to rotate clockwise and drag down to soft drop. A drag keeps its axis until the finger lifts, and a lock ends a drop. Only the first finger counts. `src/match/gestures.js` turns touches into the same masks as keys, counting ticks rather than time; thresholds are in `src/config/touch.js`, mostly in CSS pixels.
+
+`src/match/` turns keys, touches and frame time into engine ticks. `src/view/` draws the state and its events: the models are pure and work out what to draw, counting ticks rather than time, and `BoardView` places sprites. Lint stops `src/view/` from importing anything that changes a match, and stored replays must give the same hashes when played through it.
 
 The level rises every 10 pairs and speeds up falling (`src/core/level.js`, values in `src/config/rules.js`). A top-out shows GAME OVER, then the result: Enter or Space plays again, Esc returns to the title.
 
@@ -80,7 +82,7 @@ npm run e2e                       # browser tests against dev and production bui
 npm run record -- [out.webm]      # video of a whole Endless match, about a minute; needs `npm run dev` running
 ```
 
-`npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock. For gameplay, `startStopped` starts a match on a seed with its clock stopped and `advance` runs an exact number of ticks. For another orientation, set the viewport size; `e2e/responsive.spec.js` has helpers. `e2e/landscape.spec.js` fails if anything moves at 960×540; if that's intended, run `UPDATE_LANDSCAPE=1 npx playwright test landscape` and review the diff.
+`npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock. For gameplay, `startStopped` starts a match on a seed with its clock stopped and `advance` runs an exact number of ticks. For another orientation, set the viewport size; `e2e/responsive.spec.js` has helpers. `e2e/touch.spec.js` sends real touch events through Chromium. `e2e/landscape.spec.js` fails if anything moves at 960×540; if that's intended, run `UPDATE_LANDSCAPE=1 npx playwright test landscape` and review the diff.
 
 GitHub Actions runs check, build and e2e on every push and pull request; a failed run keeps its report and videos for 14 days.
 
@@ -90,7 +92,7 @@ GitHub Actions runs check, build and e2e on every push and pull request; a faile
 src/main.js                Phaser.Game config (FIT, pixelArt, no physics)
 src/config/                tunables (rules.js: the ones that affect results)
 src/core/                  the rules engine: pure, deterministic, no Phaser
-src/match/                 tick runner, keyboard input and stats
+src/match/                 tick runner, keyboard and touch input, stats
 src/debug/                 debug keys and boards (dev builds)
 src/layout/                screen size and where everything goes
 src/view/                  board models (pure) and drawing

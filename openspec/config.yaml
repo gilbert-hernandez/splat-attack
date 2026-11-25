@@ -17,7 +17,7 @@ context: |
   - SCORE is the goal. A sitewide leaderboard comes after the demo: run records must be replayable to verify a score.
   - CPU rivals must play differently every match (seeded per-match variation, mid-match adaptation, no scripted moves),
     with strength held in a band so scores stay fair.
-  - Not in the demo: leaderboard, accounts, local or online multiplayer, touch.
+  - Not in the demo: leaderboard, accounts, local or online multiplayer.
 
   Tech stack: Phaser 4 (pinned exact version) + Vite, plain modern JavaScript (ES modules). Static build only (no backend).
   src/core/ and src/ai/ are pure: no Phaser, no Math.random, no clock; integer math; seeded RNG; fixed 60 Hz ticks.

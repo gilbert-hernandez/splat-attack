@@ -16,7 +16,7 @@ export default class SpritePool {
     this.used = 0;
   }
 
-  place(x, y, key, frame = 0) {
+  place(x, y, key, frame = 0, scale = 1) {
     let sprite = this.sprites[this.used];
     if (!sprite) {
       const { depth, alpha, origin } = this.options;
@@ -24,7 +24,7 @@ export default class SpritePool {
       this.sprites.push(sprite);
     }
     this.used++;
-    return sprite.setTexture(key, frame).setPosition(Math.round(x), Math.round(y)).setVisible(true);
+    return sprite.setTexture(key, frame).setPosition(Math.round(x), Math.round(y)).setScale(scale).setVisible(true);
   }
 
   end() {

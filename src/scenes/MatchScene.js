@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { BOARD, CONTROLS, DEBUG, DISPLAY, FLOW } from '../config/index.js';
+import { CONTROLS, DEBUG, DISPLAY, FLOW } from '../config/index.js';
 import DebugKeys from '../debug/debugKeys.js';
+import { onLayout } from '../layout/manager.js';
 import MatchInput from '../match/input.js';
 import MatchRunner from '../match/runner.js';
 import MatchStats from '../match/stats.js';
@@ -24,14 +25,10 @@ export default class MatchScene extends Phaser.Scene {
 
   create() {
     const solo = this.mode === 'endless';
-    this.view = new BoardView(this, {
-      x: solo ? BOARD.soloX : BOARD.playerX,
-      frameKey: 'board_frame_player',
-      preview: true,
-    });
-    if (!solo) this.rivalView = new BoardView(this, { x: BOARD.rivalX, frameKey: 'board_frame_rival' });
+    this.view = new BoardView(this, { frameKey: 'board_frame_player', preview: true });
+    this.rivalView = solo ? null : new BoardView(this, { frameKey: 'board_frame_rival' });
     this.gameOverText = this.add
-      .text(this.view.centerX, DISPLAY.height / 2, 'GAME\nOVER', {
+      .text(0, 0, 'GAME\nOVER', {
         fontFamily: FLOW.fontFamily,
         fontSize: '48px',
         fontStyle: 'bold',
@@ -46,8 +43,18 @@ export default class MatchScene extends Phaser.Scene {
     this.debug = DEBUG.enabled ? new DebugKeys(this) : null;
     this.begin(crypto.getRandomValues(new Uint32Array(1))[0]);
     this.listen();
+    onLayout(this, (layout, rotated) => this.place(layout, rotated));
     addSceneLabel(this);
     this.scene.launch('UI');
+  }
+
+  /** @param {import('../layout/layout.js').Layout} layout */
+  place({ match }, rotated) {
+    const { player, gameOver } = match[this.mode];
+    this.view.place(player);
+    this.rivalView?.place(match.ladder.rival);
+    this.gameOverText.setPosition(gameOver.x, gameOver.y);
+    if (rotated) this.openPause();
   }
 
   listen() {

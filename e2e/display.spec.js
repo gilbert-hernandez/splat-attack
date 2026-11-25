@@ -5,18 +5,24 @@ import { openGame, waitFrames } from './support.js';
 const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 for (const size of [
-  { width: 1400, height: 600 },
-  { width: 700, height: 900 },
+  { width: 1400, height: 600, game: [960, 540] },
+  { width: 960, height: 540, game: [960, 540] },
+  { width: 844, height: 390, game: [960, 540] },
+  { width: 700, height: 900, game: [360, 640] },
+  { width: 375, height: 667, game: [360, 640] },
+  { width: 390, height: 844, game: [360, 778] },
 ]) {
   test(`fits and centers at ${size.width}x${size.height}, unsmoothed`, async ({ page }) => {
     await openGame(page);
-    await page.setViewportSize(size);
-    const scale = Math.min(size.width / 960, size.height / 540);
+    await page.setViewportSize({ width: size.width, height: size.height });
+    const [gameWidth, gameHeight] = size.game;
+    const scale = Math.min(size.width / gameWidth, size.height / gameHeight);
     const canvas = page.locator('#game canvas');
-    await expect.poll(async () => Math.abs((await canvas.boundingBox()).width - 960 * scale)).toBeLessThan(2);
+    await expect.poll(async () => Math.abs((await canvas.boundingBox()).width - gameWidth * scale)).toBeLessThan(2);
     await waitFrames(page);
     const box = await canvas.boundingBox();
-    expect(Math.abs(box.height - 540 * scale)).toBeLessThan(2);
+    expect(await canvas.evaluate((c) => [c.width, c.height])).toEqual(size.game);
+    expect(Math.abs(box.height - gameHeight * scale)).toBeLessThan(2);
     expect(Math.abs(box.x - (size.width - box.width) / 2)).toBeLessThan(2);
     expect(Math.abs(box.y - (size.height - box.height) / 2)).toBeLessThan(2);
     expect(await canvas.evaluate((c) => getComputedStyle(c).imageRendering)).toMatch(/pixelated|crisp/);

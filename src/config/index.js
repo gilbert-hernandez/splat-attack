@@ -1,5 +1,6 @@
 // Single import point for tunables.
 export { DISPLAY, DEBUG } from './display.js';
+export { LAYOUT, SCREENS } from './layout.js';
 export { BOARD } from './board.js';
 export { FLOW } from './flow.js';
 export { RULES } from './rules.js';

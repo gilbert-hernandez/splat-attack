@@ -8,13 +8,11 @@ const FRAMES = { normal: 0, hover: 1, pressed: 2 };
 export default class Button extends Phaser.GameObjects.Container {
   /**
    * @param {Phaser.Scene} scene
-   * @param {number} x center x
-   * @param {number} y center y
    * @param {string} label
    * @param {() => void} onClick
    */
-  constructor(scene, x, y, label, onClick) {
-    super(scene, x, y);
+  constructor(scene, label, onClick) {
+    super(scene, 0, 0);
     this.armed = false;
     this.over = false;
     this.placeholder = (scene.registry.get('placeholders') ?? []).includes(KEY);
@@ -46,6 +44,13 @@ export default class Button extends Phaser.GameObjects.Container {
       scene.input.off('pointerup', disarm);
       scene.input.off('pointerupoutside', disarm);
     });
+    this.refresh();
+  }
+
+  /** Moves the button's center. A press in progress is cancelled. */
+  place({ x, y }) {
+    this.setPosition(x, y);
+    this.armed = false;
     this.refresh();
   }
 

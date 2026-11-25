@@ -1,5 +1,6 @@
-import { DEBUG, DISPLAY, FLOW } from '../config/index.js';
+import { DEBUG, FLOW } from '../config/index.js';
 import { spawn } from '../core/engine.js';
+import { onLayout, placeText } from '../layout/manager.js';
 import { BOARDS, parseBoard } from './boards.js';
 
 /** Debug keys for a match. Only made in dev builds; the only code that edits a match's state. */
@@ -8,9 +9,9 @@ export default class DebugKeys {
   constructor(match) {
     this.match = match;
     this.reset();
-    const { width, height } = DISPLAY;
-    const style = { fontFamily: FLOW.fontFamily, fontSize: '12px', color: FLOW.mutedColor };
-    match.add.text(width / 2, height - 12, DEBUG.hint, style).setOrigin(0.5);
+    const style = { fontFamily: FLOW.fontFamily, fontSize: '12px', color: FLOW.mutedColor, align: 'center' };
+    const hint = match.add.text(0, 0, DEBUG.hint, style).setOrigin(0.5);
+    onLayout(match, (layout) => placeText(hint, layout.match.debugHint));
   }
 
   /** Call when a new match begins. */

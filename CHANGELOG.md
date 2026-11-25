@@ -4,6 +4,13 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.1.1] - 2026-11-25
+
+### Added
+
+- **Responsive layout** (SA-26): windows taller than they are wide get a portrait game, 360 wide and 640 to 780 tall. Every scene takes its positions from a layout config and moves without restarting, and rotating mid-match pauses the match. Landscape is unchanged.
+- **Portrait art entries** (SA-26): nine SA-30 files in the manifest and `ASSETS.md`, with placeholders.
+
 ## [0.1.0] - 2026-11-25
 
 Milestone M1 Core is complete: Endless plays from the title to a top-out, the result and a new match. All art is still generated placeholders.

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { DISPLAY, FLOW } from '../config/index.js';
+import { FLOW } from '../config/index.js';
+import { onLayout, placeText } from '../layout/manager.js';
 import { MANIFEST } from '../assets/manifest.js';
 import { AVAILABLE_FILES } from '../assets/available.js';
 import { createPlaceholder } from '../assets/placeholders.js';
@@ -24,22 +25,30 @@ export default class PreloadScene extends Phaser.Scene {
   }
 
   createProgressBar() {
-    const [barW, barH] = [320, 16];
-    const x = (DISPLAY.width - barW) / 2;
-    const y = DISPLAY.height / 2;
-    this.add
-      .text(DISPLAY.width / 2, y - 24, 'Loading...', { fontFamily: FLOW.fontFamily, fontSize: '16px' })
-      .setOrigin(0.5);
-    this.add
-      .graphics()
-      .lineStyle(2, 0xffffff, 1)
-      .strokeRect(x - 2, y - 2, barW + 4, barH + 4);
+    const text = this.add.text(0, 0, 'Loading...', { fontFamily: FLOW.fontFamily, fontSize: '16px' }).setOrigin(0.5);
+    const outline = this.add.graphics();
     const fill = this.add.graphics();
-    this.load.on('progress', (p) => {
+    let bar = { x: 0, y: 0, width: 0, height: 0 };
+    let progress = 0;
+    const draw = () => {
       fill
         .clear()
         .fillStyle(0xd946ef, 1)
-        .fillRect(x, y, barW * p, barH);
+        .fillRect(bar.x - bar.width / 2, bar.y, bar.width * progress, bar.height);
+    };
+    onLayout(this, ({ preload }) => {
+      bar = preload.bar;
+      const { x, y, width, height } = bar;
+      placeText(text, { x, y: y - 24 });
+      outline
+        .clear()
+        .lineStyle(2, 0xffffff, 1)
+        .strokeRect(x - width / 2 - 2, y - 2, width + 4, height + 4);
+      draw();
+    });
+    this.load.on('progress', (p) => {
+      progress = p;
+      draw();
     });
   }
 

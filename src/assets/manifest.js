@@ -100,6 +100,13 @@ export const MANIFEST = [
   image('sa_ui_logo.png', 480, 160, 'SA-25'),
   image('sa_ui_title_bg.png', 960, 540, 'SA-25'),
   image('sa_ui_result_panel.png', 400, 300, 'SA-25'),
+
+  // SA-30 Portrait screens
+  ...[1, 2, 3, 4, 5].map((n) => image(`sa_bg_wall${n}_portrait.png`, 360, 780, 'SA-30')),
+  image('sa_ui_title_bg_portrait.png', 360, 780, 'SA-30'),
+  image('sa_ui_logo_portrait.png', 320, 112, 'SA-30'),
+  image('sa_ui_result_panel_portrait.png', 340, 400, 'SA-30'),
+  image('sa_ui_ladder_portrait.png', 340, 400, 'SA-30'),
 ];
 
 /** Look up an entry by key (throws on typos so they surface immediately). */

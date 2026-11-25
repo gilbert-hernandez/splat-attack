@@ -27,7 +27,7 @@
 
 | Area | x | y | Size | Notes |
 |---|---|---|---|---|
-| HUD: mode, score, level | centered | 0 | 360×56 | Text at y 10, 28 and 46 |
+| HUD: mode, score, level | 56 | 0 | 248×56 | Text at y 10, 28 and 46 |
 | Pause button (SA-28) | 304 | 4 | 48×48 | Reserved |
 | Pending gunk (SA-8) | 0 | 56 | 360×28 | Reserved, 24 px icons |
 | Player frame | 0 | 84 | 240×400 | Ladder; cells at 8, 92 |

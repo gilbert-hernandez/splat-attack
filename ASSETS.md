@@ -1,6 +1,6 @@
 # Splat Attack: Art Spec
 
-The technical spec for every graphic in the game (SA-19 to SA-25). If a ticket and this file disagree, **this file wins**; tell Gilbert. The style guide (SA-18) sets the look, and may change color names or sizes here.
+The technical spec for every graphic in the game (SA-19 to SA-25 and SA-30). If a ticket and this file disagree, **this file wins**; tell Gilbert. The style guide (SA-18) sets the look, and may change color names or sizes here.
 
 > The game runs without any art: a missing file becomes a placeholder of the right size. Deliver files in any order.
 
@@ -148,3 +148,19 @@ Sizes are per frame (W×H).
 | SA-25  | `sa_ui_result_panel.png` | 400×300 | 1      | Behind the score breakdown     |
 
 Not loaded by the game (SA-25): a 1200×630 social-preview image and a 640×360 Arcade thumbnail.
+
+### SA-30: Portrait screens
+
+For phones held upright, where the game is 360 wide and 640 to 780 tall. Reuse the designs from SA-23 to SA-25. The touch button and icons on the ticket are added here with SA-28.
+
+| Ticket | File                              | Size    | Frames | Notes                                                      |
+| ------ | --------------------------------- | ------- | ------ | ---------------------------------------------------------- |
+| SA-30  | `sa_bg_wall1_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom |
+| SA-30  | `sa_bg_wall2_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom |
+| SA-30  | `sa_bg_wall3_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom |
+| SA-30  | `sa_bg_wall4_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom |
+| SA-30  | `sa_bg_wall5_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom |
+| SA-30  | `sa_ui_title_bg_portrait.png`     | 360×780 | 1      | Opaque, same cropping; leave the center clear              |
+| SA-30  | `sa_ui_logo_portrait.png`         | 320×112 | 1      | Logo for narrow screens                                    |
+| SA-30  | `sa_ui_result_panel_portrait.png` | 340×400 | 1      | Behind the score breakdown                                 |
+| SA-30  | `sa_ui_ladder_portrait.png`       | 340×400 | 1      | 5 rival slots                                              |

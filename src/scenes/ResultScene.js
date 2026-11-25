@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { DISPLAY, FLOW } from '../config/index.js';
+import { FLOW } from '../config/index.js';
 import { formatTime } from '../match/stats.js';
+import { onLayout, placeText } from '../layout/manager.js';
 import Button from '../ui/Button.js';
 import { addSceneLabel } from './sceneLabel.js';
 
@@ -19,19 +20,29 @@ export default class ResultScene extends Phaser.Scene {
   }
 
   create() {
-    const x = DISPLAY.width / 2;
     const { score, level, pairs, longestChain, ticks } = this.stats;
-    const text = (y, size, value) =>
-      this.add.text(x, y, value, { fontFamily: FLOW.fontFamily, fontSize: `${size}px` }).setOrigin(0.5);
-    const panel = this.add.image(x, DISPLAY.height / 2, 'ui_result_panel');
-    if ((this.registry.get('placeholders') ?? []).includes('ui_result_panel')) panel.setTint(FLOW.panelTint);
-    text(150, 36, 'RESULT');
-    text(188, 18, FLOW.modes[this.mode]);
-    this.scoreText = text(222, 28, `SCORE ${score}`);
+    const text = (size, value) =>
+      this.add.text(0, 0, value, { fontFamily: FLOW.fontFamily, fontSize: `${size}px` }).setOrigin(0.5);
+    const placeholders = this.registry.get('placeholders') ?? [];
+    const panel = this.add.image(0, 0, 'ui_result_panel');
+    const heading = text(36, 'RESULT');
+    const mode = text(18, FLOW.modes[this.mode]);
+    this.scoreText = text(28, `SCORE ${score}`);
     const rows = [`LEVEL ${level}`, `PAIRS ${pairs}`, `LONGEST CHAIN ${longestChain}`, `TIME ${formatTime(ticks)}`];
-    this.statTexts = rows.map((row, i) => text(254 + i * 22, 16, row));
-    this.againButton = new Button(this, x - 90, 372, 'PLAY AGAIN', () => this.playAgain());
-    this.titleButton = new Button(this, x + 90, 372, 'TITLE', () => this.toTitle());
+    this.statTexts = rows.map((row) => text(16, row));
+    this.againButton = new Button(this, 'PLAY AGAIN', () => this.playAgain());
+    this.titleButton = new Button(this, 'TITLE', () => this.toTitle());
+    onLayout(this, ({ result }) => {
+      panel.setTexture(result.panel.key).setPosition(result.panel.x, result.panel.y).clearTint();
+      if (placeholders.includes(result.panel.key)) panel.setTint(FLOW.panelTint);
+      placeText(heading, result.heading);
+      placeText(mode, result.mode);
+      placeText(this.scoreText, result.score);
+      const { x, y, spacing } = result.stats;
+      this.statTexts.forEach((row, i) => placeText(row, { x, y: y + i * spacing }));
+      this.againButton.place(result.again);
+      this.titleButton.place(result.title);
+    });
     addSceneLabel(this);
 
     this.time.delayedCall(FLOW.resultInputDelayMs, () => {

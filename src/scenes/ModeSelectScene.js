@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { DISPLAY, FLOW } from '../config/index.js';
+import { FLOW } from '../config/index.js';
+import { onLayout, placeText } from '../layout/manager.js';
 import Button from '../ui/Button.js';
 import { addSceneLabel } from './sceneLabel.js';
 
@@ -9,12 +10,19 @@ export default class ModeSelectScene extends Phaser.Scene {
   }
 
   create() {
-    const x = DISPLAY.width / 2;
-    this.add.text(x, 140, 'CHOOSE A MODE', { fontFamily: FLOW.fontFamily, fontSize: '36px' }).setOrigin(0.5);
+    const heading = this.add
+      .text(0, 0, 'CHOOSE A MODE', { fontFamily: FLOW.fontFamily, fontSize: '36px' })
+      .setOrigin(0.5);
     const pick = (mode) => () => this.scene.start('Match', { mode });
-    this.ladderButton = new Button(this, x, 240, FLOW.modes.ladder, pick('ladder'));
-    this.endlessButton = new Button(this, x, 310, FLOW.modes.endless, pick('endless'));
-    this.backButton = new Button(this, x, 420, 'BACK', () => this.scene.start('Title'));
+    this.ladderButton = new Button(this, FLOW.modes.ladder, pick('ladder'));
+    this.endlessButton = new Button(this, FLOW.modes.endless, pick('endless'));
+    this.backButton = new Button(this, 'BACK', () => this.scene.start('Title'));
+    onLayout(this, ({ modeSelect }) => {
+      placeText(heading, modeSelect.heading);
+      this.ladderButton.place(modeSelect.ladder);
+      this.endlessButton.place(modeSelect.endless);
+      this.backButton.place(modeSelect.back);
+    });
     addSceneLabel(this);
     this.input.keyboard.on('keydown-ESC', () => this.scene.start('Title'));
   }

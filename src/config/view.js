@@ -5,6 +5,5 @@ export const VIEW = {
   idleFrameTicks: 12,
   landFrameTicks: 3,
   ghostAlpha: 0.35,
-  // Next-pair boxes, from the board frame's right edge.
-  next: { gap: 8, spacing: 104, boxWidth: 64, boxHeight: 96 },
+  nextBox: { width: 64, height: 96 },
 };

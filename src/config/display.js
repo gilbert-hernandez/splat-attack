@@ -1,7 +1,5 @@
 // Display and debug tunables.
 export const DISPLAY = {
-  width: 960,
-  height: 540,
   backgroundColor: '#14121f',
 };
 

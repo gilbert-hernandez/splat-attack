@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { DISPLAY, FLOW } from '../config/index.js';
+import { FLOW } from '../config/index.js';
+import { onLayout, placeText } from '../layout/manager.js';
 import Button from '../ui/Button.js';
 import { addSceneLabel } from './sceneLabel.js';
 
@@ -10,13 +11,18 @@ export default class PauseScene extends Phaser.Scene {
   }
 
   create() {
-    const { width, height } = DISPLAY;
     this.ready = false;
     this.left = false;
-    this.add.rectangle(0, 0, width, height, 0x000000, 0.7).setOrigin(0);
-    this.add.text(width / 2, 160, 'PAUSED', { fontFamily: FLOW.fontFamily, fontSize: '40px' }).setOrigin(0.5);
-    this.resumeButton = new Button(this, width / 2, 260, 'RESUME', () => this.resume());
-    this.quitButton = new Button(this, width / 2, 330, 'QUIT', () => this.quit());
+    const shade = this.add.rectangle(0, 0, 1, 1, 0x000000, 0.7).setOrigin(0);
+    const heading = this.add.text(0, 0, 'PAUSED', { fontFamily: FLOW.fontFamily, fontSize: '40px' }).setOrigin(0.5);
+    this.resumeButton = new Button(this, 'RESUME', () => this.resume());
+    this.quitButton = new Button(this, 'QUIT', () => this.quit());
+    onLayout(this, ({ screen, pause }) => {
+      shade.setSize(screen.width, screen.height);
+      placeText(heading, pause.heading);
+      this.resumeButton.place(pause.resume);
+      this.quitButton.place(pause.quit);
+    });
     addSceneLabel(this)?.setY(36);
     this.input.keyboard.on('keydown-ESC', () => {
       if (this.ready) this.resume();

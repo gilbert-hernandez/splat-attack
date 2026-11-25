@@ -49,6 +49,14 @@ Controls: A/D or ←/→ move, S or ↓ soft drop, Q/Z and E/X rotate, Esc pause
 
 The level rises every 10 pairs and speeds up falling (`src/core/level.js`, values in `src/config/rules.js`). A top-out shows GAME OVER, then the result: Enter or Space plays again, Esc returns to the title.
 
+### Layouts
+
+A window taller than it is wide gets a portrait game, 360 wide and 640 to 780 tall; any other gets 960×540. `src/layout/` picks the size and changes it when the window does. Rotating during a match pauses it.
+
+Every position is in `src/config/layout.js`, for both orientations. A scene makes its objects once and moves them in a callback passed to `onLayout(scene, place)`, which runs at once and after every change, also while the scene is paused. To add something, put its place in both orientations (`npm test` fails if one lacks it) and set it there.
+
+Space for the pause button, pending gunk, meter and touch controls is reserved in the portrait match's `areas`. Unit tests check that nothing overlaps them.
+
 ### Debug keys
 
 In a match, dev builds only (`src/debug/`, keys in `src/config/display.js`):
@@ -72,18 +80,19 @@ npm run e2e                       # browser tests against dev and production bui
 npm run record -- [out.webm]      # video of a whole Endless match, about a minute; needs `npm run dev` running
 ```
 
-`npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock. For gameplay, `startStopped` starts a match on a seed with its clock stopped and `advance` runs an exact number of ticks.
+`npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock. For gameplay, `startStopped` starts a match on a seed with its clock stopped and `advance` runs an exact number of ticks. For another orientation, set the viewport size; `e2e/responsive.spec.js` has helpers. `e2e/landscape.spec.js` fails if anything moves at 960×540; if that's intended, run `UPDATE_LANDSCAPE=1 npx playwright test landscape` and review the diff.
 
 GitHub Actions runs check, build and e2e on every push and pull request; a failed run keeps its report and videos for 14 days.
 
 ## Layout
 
 ```
-src/main.js                Phaser.Game config (960×540, FIT, pixelArt, no physics)
+src/main.js                Phaser.Game config (FIT, pixelArt, no physics)
 src/config/                tunables (rules.js: the ones that affect results)
 src/core/                  the rules engine: pure, deterministic, no Phaser
 src/match/                 tick runner, keyboard input and stats
 src/debug/                 debug keys and boards (dev builds)
+src/layout/                screen size and where everything goes
 src/view/                  board models (pure) and drawing
 src/assets/manifest.js     every graphic, plus validate()
 src/assets/placeholders.js generated stand-ins for missing art
@@ -107,7 +116,7 @@ Name and size the PNG as listed in [ASSETS.md](ASSETS.md), copy it into `src/ass
 
 ## Workflow
 
-Tracked in the Vikunja project **Splat Attack** (`SA`). One Dev ticket = one OpenSpec change = one branch: propose → review → apply → archive → tag. Art tickets (SA-18 to SA-25) don't use OpenSpec.
+Tracked in the Vikunja project **Splat Attack** (`SA`). One Dev ticket = one OpenSpec change = one branch: propose → review → apply → archive → tag. Art tickets (SA-18 to SA-25 and SA-30) don't use OpenSpec.
 
 ## License
 

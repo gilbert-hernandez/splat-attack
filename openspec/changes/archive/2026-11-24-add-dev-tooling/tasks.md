@@ -25,6 +25,7 @@
 
 - [x] 5.1 Add the GitHub Actions workflow (check, build, e2e, artifacts on failure)
 - [x] 5.2 Update the README
-- [ ] 5.3 Manual check: run `npm run check`, `npm run e2e` and `npm run record`; watch one e2e video and the recording; confirm `npm run dev` works on port 5174
-- [ ] 5.4 Push the branch (with Gilbert's OK); verify CI passes
+- [x] 5.3 Manual check: run `npm run check`, `npm run e2e` and `npm run record`; watch one e2e video and the recording; confirm `npm run dev` works on port 5174
+  - _Verified by Gilbert 2026-11-24._
+- [x] 5.4 Push the branch (with Gilbert's OK); verify CI passes
 - [x] 5.5 Bump to 0.0.2 and add the CHANGELOG.md section for SA-2

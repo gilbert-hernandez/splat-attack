@@ -16,12 +16,12 @@ The project SHALL provide npm scripts for a hot-reload dev server, a static prod
 - **WHEN** a developer runs `npm run build`
 - **THEN** `dist/` runs from any static web server and any sub-path, with no backend
 
-### Requirement: Fixed base resolution with crisp scaling
-The game SHALL render at 960×540 and scale to fit the window, centered, keeping its aspect ratio, without smoothing.
+### Requirement: Crisp scaling
+The game SHALL scale its current screen to fit the window, centered, keeping its aspect ratio, without smoothing.
 
 #### Scenario: Window is resized
 - **WHEN** the window is resized
-- **THEN** the canvas is the largest centered 16:9 size that fits and pixel art is not blurred
+- **THEN** the canvas is the largest centered size of the current screen's shape that fits, and pixel art is not blurred
 
 ### Requirement: Scene flow skeleton
 The game SHALL go from loading to title to mode select to a match with a UI overlay, and SHALL have Pause and Result screens.

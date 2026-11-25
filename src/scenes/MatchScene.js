@@ -3,8 +3,8 @@ import { BOARD, DEBUG } from '../config/index.js';
 import { COLORS } from '../assets/manifest.js';
 import { addSceneLabel } from './sceneLabel.js';
 
-// Stub match: placeholder blobs on the boards, proving the asset keys and layout. The real board
-// engine arrives in SA-3 and its view in SA-5. Ladder shows two boards, Endless (solo) one.
+// Stub match: placeholder blobs on the boards, proving the asset keys and layout. The
+// engine is in src/core/; its view arrives in SA-5. Ladder shows two boards, Endless (solo) one.
 export default class MatchScene extends Phaser.Scene {
   constructor() {
     super('Match');

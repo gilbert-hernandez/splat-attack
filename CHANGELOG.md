@@ -4,6 +4,12 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.0.3] - 2026-11-25
+
+### Added
+
+- **Board engine** (SA-3): the deterministic rules engine in `src/core/`, with the board, seeded pairs and next queue, moving, rotating with kicks, soft drop, lock budget, settling and top-out. Not visible in the game yet. Text board fixtures for tests, and lint rules that keep the engine pure.
+
 ## [0.0.2] - 2026-11-24
 
 ### Added

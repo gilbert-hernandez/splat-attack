@@ -1,7 +1,10 @@
-// Board size and placement on the 960x540 screen. (x, y) is the top-left of the visible cells.
+import { RULES } from './rules.js';
+
+// Board placement on the 960x540 screen. (x, y) is the top-left of the visible cells.
+// Its size comes from the rules.
 export const BOARD = {
-  columns: 7,
-  rows: 12,
+  columns: RULES.columns,
+  rows: RULES.visibleRows,
   cell: 32,
   frameBorder: 8,
   y: 100,

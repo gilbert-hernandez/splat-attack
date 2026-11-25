@@ -26,6 +26,12 @@ npm run typecheck      # type-check the JSDoc (tsc)
 npm run coverage       # unit-test coverage; HTML report in coverage/index.html
 ```
 
+### Engine
+
+`createState(seed)` starts a match and `step(state, input)` advances it one tick (60 per second); `input` combines the `INPUT` bits. The same seed and inputs always give the same match. Lint fails if `src/core/` or `src/ai/` uses Phaser, randomness, the clock, browser globals or non-integer literals.
+
+Engine tests draw boards as text with `tests/core/fixtures.js`: `.` is empty, letters are colors (`r y g b p`), and the falling pair shows in uppercase.
+
 ### Browser tests and videos
 
 ```bash
@@ -42,7 +48,8 @@ GitHub Actions runs check, build and e2e on every push and pull request; a faile
 
 ```
 src/main.js                Phaser.Game config (960×540, FIT, pixelArt, no physics)
-src/config/                tunables
+src/config/                tunables (rules.js: the ones that affect results)
+src/core/                  the rules engine: pure, deterministic, no Phaser
 src/assets/manifest.js     every graphic, plus validate()
 src/assets/placeholders.js generated stand-ins for missing art
 src/assets/img/            david's PNGs go here

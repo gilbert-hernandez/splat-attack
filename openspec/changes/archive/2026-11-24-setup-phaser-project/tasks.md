@@ -27,5 +27,5 @@
 - [x] 5.1 Add README, LICENSE and ART-LICENSE.md
 - [x] 5.2 Run tests and `npm run build`; verify `npm run preview` behaves like dev without debug keys
 - [x] 5.3 Manual check with `npm run dev`: loading → Title with version → each mode → Esc pause and resume → `R` result → Title; resize stays centered and crisp; only the placeholder warning in the console
-  - _Covered by an automated Chromium run on 2026-11-24; Gilbert approved finishing SA-1._
+  - _Verified in browser by Gilbert 2026-11-24 (also covered by an automated Chromium run)._
 - [x] 5.4 Confirm `package.json` is 0.0.1 and add its dated CHANGELOG.md section naming SA-1

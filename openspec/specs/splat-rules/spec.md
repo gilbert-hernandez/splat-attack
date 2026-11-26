@@ -40,7 +40,7 @@ After a splat the remaining blobs SHALL fall, and any new groups SHALL splat as 
 - **THEN** its first step is numbered 1
 
 ### Requirement: Scoring
-Each chain step SHALL add points that rise with splat size, number of colors in the step, and chain position. Points SHALL be whole numbers, and their values SHALL be config.
+Each chain step SHALL add points that rise with splat size, number of colors in the step, chain position and stain matches. Stain-match points SHALL be added before the color and chain bonuses. Points SHALL be whole numbers, and their values SHALL be config.
 
 #### Scenario: Known boards
 - **WHEN** a known board resolves
@@ -54,16 +54,20 @@ Each chain step SHALL add points that rise with splat size, number of colors in 
 - **WHEN** a pair lands without a splat, with or without soft drop
 - **THEN** the score doesn't change
 
+#### Scenario: Stain matches in a chain
+- **WHEN** the same stain matches happen in chain step 2 instead of step 1
+- **THEN** their extra points are multiplied by step 2's chain bonus
+
 ### Requirement: Events
-Each tick SHALL report what happened: lock, settle, splat, chain end and match over. Events SHALL be enough to draw every removal and fall, and SHALL NOT be part of the match state.
+Each tick SHALL report what happened: lock, settle, splat, chain end and match over. Events SHALL be enough to draw every removal, fall and stain, and SHALL NOT be part of the match state.
 
 #### Scenario: Splat event
 - **WHEN** a chain step splats
-- **THEN** one event gives its chain number, each group's color and cells, and its points
+- **THEN** one event gives its chain number, each group's color, cells and stain-match cells, and its points
 
 #### Scenario: Reconstruction
-- **WHEN** a viewer applies every event to an empty board
-- **THEN** it matches the engine's board after every tick
+- **WHEN** a viewer applies every event to an empty board with clean stains
+- **THEN** its board and stains match the engine's after every tick
 
 #### Scenario: Ignored events
 - **WHEN** the caller ignores or changes the returned events

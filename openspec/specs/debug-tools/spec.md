@@ -6,7 +6,7 @@ Defines the developer keys that set up, slow down and end a match while testing,
 ## Requirements
 
 ### Requirement: Debug keys
-In development builds a match SHALL have keys to set the next pair, load a prepared board, freeze the clock, step one tick, fast-forward and force the end, and SHALL list them on screen. They SHALL do nothing while paused and in production builds.
+In development builds a match SHALL have keys to set the next pair, load a prepared board, freeze the clock, step one tick, fast-forward and force the end, and SHALL list them on screen. They SHALL do nothing while paused and in production builds. Prepared boards MAY include stains, and at least one SHALL set up a stain match.
 
 #### Scenario: Set the next pair
 - **WHEN** two color keys are pressed
@@ -14,7 +14,11 @@ In development builds a match SHALL have keys to set the next pair, load a prepa
 
 #### Scenario: Load a board
 - **WHEN** the board key is pressed while a match is running
-- **THEN** the next prepared board is shown with a pair at the spawn cell, and play continues from it
+- **THEN** the next prepared board, with its stains, is shown with a pair at the spawn cell, and play continues from it
+
+#### Scenario: Stain board
+- **WHEN** the stain board is loaded and its pair is dropped where its comment says
+- **THEN** the splat scores a stain match and paints over a stain of another color
 
 #### Scenario: Step
 - **WHEN** the step key is pressed

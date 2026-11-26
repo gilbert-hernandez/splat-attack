@@ -17,14 +17,18 @@ A match SHALL be recordable as a seed and its inputs, and playing the recording 
 - **THEN** playback throws an error naming the problem
 
 ### Requirement: State hash
-Equal states SHALL have equal hashes regardless of property order, and a change to any value SHALL change the hash in practice.
+Equal states SHALL have equal hashes regardless of property order, and a change to any value, stains included, SHALL change the hash in practice.
 
 #### Scenario: One cell differs
 - **WHEN** two states differ in one cell
 - **THEN** their hashes differ
 
+#### Scenario: One stain differs
+- **WHEN** two states differ only in one cell's stain
+- **THEN** their hashes differ
+
 ### Requirement: Stored replays
-Stored replays SHALL be checked in Node and in Chromium against their expected score and hashes. At least one SHALL contain a chain of 3 or more.
+Stored replays SHALL be checked in Node and in Chromium against their expected score and hashes. At least one SHALL contain a chain of 3 or more, and at least one SHALL contain a stain match.
 
 #### Scenario: Rules change
 - **WHEN** a code change alters a stored replay's result
@@ -39,4 +43,4 @@ Stored replays SHALL give the same score and hashes when played in the Match sce
 
 #### Scenario: Played with the view
 - **WHEN** the browser tests play a stored replay in the Match scene
-- **THEN** its result equals the stored expected values, and the drawn board equals the final grid's visible rows
+- **THEN** its result equals the stored expected values, and the drawn board and stains equal the final state's visible rows

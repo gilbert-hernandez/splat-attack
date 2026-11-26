@@ -4,6 +4,20 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.1.4] - 2026-11-25
+
+### Added
+
+- **Phone page behavior** (SA-29): the page no longer scrolls, zooms, refreshes, selects text or opens long-press menus, also on the bars around the game.
+- **Safe areas** (SA-29): the game fits inside notches, home bars and browser bars, and its shape comes from the space left.
+- **Pause on focus loss** (SA-29): switching apps, locking the phone or leaving the window opens Pause during a match; coming back leaves it paused. Moved here from SA-13.
+- **Touch recording** (SA-29): `npm run record -- --touch` records an upright phone match, with menus and pause by touch.
+
+### Changed
+
+- Text sizes live in the layout config. In landscape touch mode, text is at least 21 game px (12 CSS px on a 568×320 phone), and the result's buttons sit lower to make room. Keyboard mode is unchanged.
+- A real-device check on an Android phone found nothing to tune, so touch settings are unchanged. iPhone is untested.
+
 ## [0.1.3] - 2026-11-25
 
 ### Added

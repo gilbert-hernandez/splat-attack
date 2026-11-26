@@ -106,9 +106,18 @@ export default class MatchScene extends Phaser.Scene {
 
     this.listenToTouch();
 
-    const release = () => this.releaseInput();
-    this.game.events.on(Phaser.Core.Events.BLUR, release);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.game.events.off(Phaser.Core.Events.BLUR, release));
+    // Switching apps, locking the phone or clicking elsewhere pauses; coming back doesn't resume.
+    const away = () => {
+      this.releaseInput();
+      this.openPause();
+    };
+    const { BLUR, HIDDEN } = Phaser.Core.Events;
+    this.game.events.on(BLUR, away);
+    this.game.events.on(HIDDEN, away);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.game.events.off(BLUR, away);
+      this.game.events.off(HIDDEN, away);
+    });
   }
 
   listenToTouch() {

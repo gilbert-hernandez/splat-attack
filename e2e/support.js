@@ -1,10 +1,27 @@
 // Shared browser-test helpers. Wait on game state, never on wall-clock time.
 
-/** Keep window focus changes from reaching Phaser (a focus loss will open Pause from SA-13). */
+/**
+ * Keep the browser's own focus changes from reaching Phaser, since a focus loss opens Pause and a
+ * headless page can lose focus at any time. Blurs a test sends itself (untrusted) still get through.
+ */
 export function ignoreWindowBlur(page) {
   return page.addInitScript(() => {
-    window.addEventListener('blur', (e) => e.stopImmediatePropagation(), true);
+    window.addEventListener('blur', (e) => e.isTrusted && e.stopImmediatePropagation(), true);
   });
+}
+
+/** The window loses focus, as when another app comes to the front. */
+export function blurWindow(page) {
+  return page.evaluate(() => window.dispatchEvent(new FocusEvent('blur')));
+}
+
+/** The page is hidden or shown again, as when the app goes to the background and comes back. */
+export function setHidden(page, hidden) {
+  return page.evaluate((h) => {
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => h });
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => (h ? 'hidden' : 'visible') });
+    document.dispatchEvent(new Event('visibilitychange'));
+  }, hidden);
 }
 
 /** Wait until a scene is active. */

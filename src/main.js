@@ -11,6 +11,9 @@ import UIScene from './scenes/UIScene.js';
 import PauseScene from './scenes/PauseScene.js';
 import ResultScene from './scenes/ResultScene.js';
 import InputMode from './ui/inputMode.js';
+import { blockPageGestures } from './page.js';
+
+blockPageGestures();
 
 const parent = document.getElementById('game').getBoundingClientRect();
 /** @type {import('./layout/layout.js').Screen} */
@@ -42,6 +45,7 @@ const game = new Phaser.Game({
   height: screen.height,
   backgroundColor: DISPLAY.backgroundColor,
   pixelArt: true,
+  disableContextMenu: true,
   // A dragging finger, both rotate buttons and the meter, plus one spare (a resting palm).
   input: { activePointers: 5 },
   scale: {

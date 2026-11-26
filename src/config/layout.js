@@ -12,33 +12,33 @@ export const SCREENS = {
 // layout in touch mode.
 export const LAYOUT = {
   landscape: {
-    preload: { bar: { x: 480, y: 270, width: 320, height: 16 } },
+    preload: { bar: { x: 480, y: 270, width: 320, height: 16 }, text: { x: 480, y: 246, size: 16 } },
     title: {
       background: { x: 480, y: 270, key: 'ui_title_bg' },
       logo: { x: 480, y: 170, key: 'ui_logo', size: 72 },
-      start: { x: 480, y: 330 },
-      hint: { x: 480, y: 460 },
-      version: { x: 8, bottom: 8 },
+      start: { x: 480, y: 330, size: 18 },
+      hint: { x: 480, y: 460, size: 14 },
+      version: { x: 8, bottom: 8, size: 14 },
     },
     modeSelect: {
-      heading: { x: 480, y: 140 },
-      ladder: { x: 480, y: 240 },
-      endless: { x: 480, y: 310 },
-      back: { x: 480, y: 420 },
+      heading: { x: 480, y: 140, size: 36 },
+      ladder: { x: 480, y: 240, size: 18 },
+      endless: { x: 480, y: 310, size: 18 },
+      back: { x: 480, y: 420, size: 18 },
     },
     pause: {
-      heading: { x: 480, y: 160 },
-      resume: { x: 480, y: 260 },
-      quit: { x: 480, y: 330 },
+      heading: { x: 480, y: 160, size: 40 },
+      resume: { x: 480, y: 260, size: 18 },
+      quit: { x: 480, y: 330, size: 18 },
     },
     result: {
       panel: { x: 480, y: 270, key: 'ui_result_panel' },
-      heading: { x: 480, y: 150 },
-      mode: { x: 480, y: 188 },
-      score: { x: 480, y: 222 },
-      stats: { x: 480, y: 254, spacing: 22 },
-      again: { x: 390, y: 372 },
-      title: { x: 570, y: 372 },
+      heading: { x: 480, y: 150, size: 36 },
+      mode: { x: 480, y: 188, size: 18 },
+      score: { x: 480, y: 222, size: 28 },
+      stats: { x: 480, y: 254, spacing: 22, size: 16 },
+      again: { x: 390, y: 372, size: 18 },
+      title: { x: 570, y: 372, size: 18 },
     },
     match: {
       ladder: {
@@ -59,8 +59,28 @@ export const LAYOUT = {
         cw: { x: 848, y: 400, width: 104, height: 104 },
       },
     },
-    // Ladder's boards move inward to clear the buttons.
+    // Ladder's boards move inward to clear the buttons, and text grows to stay readable on small
+    // phones (see TEXT below).
     touch: {
+      preload: { text: { size: 21 } },
+      title: {
+        start: { size: 21 },
+        hint: { size: 21, wrap: 720 },
+        version: { size: 21 },
+      },
+      modeSelect: { ladder: { size: 21 }, endless: { size: 21 }, back: { size: 21 } },
+      pause: { resume: { size: 21 }, quit: { size: 21 } },
+      result: {
+        mode: { size: 21 },
+        stats: { spacing: 26, size: 21 },
+        again: { y: 384, size: 21 },
+        title: { y: 384, size: 21 },
+      },
+      ui: {
+        mode: { size: 21 },
+        score: { size: 21 },
+        level: { size: 21 },
+      },
       match: {
         ladder: {
           player: { x: 136, y: 100, scale: 1, next: { x: 376, y: 100, spacing: 104 } },
@@ -78,33 +98,33 @@ export const LAYOUT = {
 
   // Written for the shortest screen (640).
   portrait: {
-    preload: { bar: { x: 180, y: 320, width: 320, height: 16 } },
+    preload: { bar: { x: 180, y: 320, width: 320, height: 16 }, text: { x: 180, y: 296, size: 16 } },
     title: {
       background: { x: 180, y: 320, key: 'ui_title_bg_portrait' },
       logo: { x: 180, y: 190, key: 'ui_logo_portrait', size: 40 },
-      start: { x: 180, y: 340 },
-      hint: { x: 180, y: 470, wrap: 336 },
-      version: { x: 8, bottom: 8 },
+      start: { x: 180, y: 340, size: 18 },
+      hint: { x: 180, y: 470, wrap: 336, size: 14 },
+      version: { x: 8, bottom: 8, size: 14 },
     },
     modeSelect: {
-      heading: { x: 180, y: 160 },
-      ladder: { x: 180, y: 270 },
-      endless: { x: 180, y: 340 },
-      back: { x: 180, y: 450 },
+      heading: { x: 180, y: 160, size: 36 },
+      ladder: { x: 180, y: 270, size: 18 },
+      endless: { x: 180, y: 340, size: 18 },
+      back: { x: 180, y: 450, size: 18 },
     },
     pause: {
-      heading: { x: 180, y: 210 },
-      resume: { x: 180, y: 310 },
-      quit: { x: 180, y: 380 },
+      heading: { x: 180, y: 210, size: 40 },
+      resume: { x: 180, y: 310, size: 18 },
+      quit: { x: 180, y: 380, size: 18 },
     },
     result: {
       panel: { x: 180, y: 320, key: 'ui_result_panel_portrait' },
-      heading: { x: 180, y: 160 },
-      mode: { x: 180, y: 200 },
-      score: { x: 180, y: 240 },
-      stats: { x: 180, y: 284, spacing: 26 },
-      again: { x: 180, y: 420 },
-      title: { x: 180, y: 480 },
+      heading: { x: 180, y: 160, size: 36 },
+      mode: { x: 180, y: 200, size: 18 },
+      score: { x: 180, y: 240, size: 28 },
+      stats: { x: 180, y: 284, spacing: 26, size: 16 },
+      again: { x: 180, y: 420, size: 18 },
+      title: { x: 180, y: 480, size: 18 },
     },
     match: {
       ladder: {
@@ -138,4 +158,11 @@ export const LAYOUT = {
       level: { x: 180, y: 46, size: 14 },
     },
   },
+};
+
+// Smallest text, in CSS px, on the smallest windows the game supports (scales 0.86 and 0.59): 14 game
+// px in portrait and 21 in landscape touch mode. Keyboard landscape is for desktops, so it keeps its sizes.
+export const TEXT = {
+  minCssPx: 12,
+  smallestWindows: { portrait: [375, 553], landscape: [568, 320] },
 };

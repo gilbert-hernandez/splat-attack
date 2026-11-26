@@ -35,9 +35,10 @@ export default class Button extends Phaser.GameObjects.Container {
     this.refresh();
   }
 
-  /** Moves the button's center. A press in progress is cancelled. */
-  place({ x, y }) {
+  /** Moves the button's center, and sets its label size if given. A press in progress is cancelled. */
+  place({ x, y, size = 0 }) {
     this.setPosition(x, y);
+    if (size) this.label.setFontSize(size);
     this.press.reset();
   }
 

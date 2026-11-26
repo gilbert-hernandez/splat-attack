@@ -63,6 +63,18 @@ Every position is in `src/config/layout.js`, for both orientations. A scene make
 
 Space for pending gunk, the meter and touch controls is reserved in the portrait match's `areas`, and `match.buttons` holds the buttons' tap targets: below the board and top right in portrait, in the outer 120 px of each side in landscape. The layout depends on the mode too: in landscape touch mode, `touch` moves the Ladder boards inward. Unit tests check that nothing overlaps, and that every tap target is at least 48 CSS px on windows of 375×553 or 568×320.
 
+Text sizes are in the layout too (`size` on each text's place). Every player-facing text must be at least 12 CSS px on those two windows (`TEXT` in `src/config/layout.js`): 14 game px in portrait, and 21 in landscape touch mode, where `touch` raises them. Keyboard landscape keeps its sizes. A unit test and `e2e/text.spec.js` check it.
+
+### On a phone
+
+The page behaves like an app. `index.html` turns off scrolling, zooming, pull-to-refresh, text selection, tap highlights and the iOS callout for the whole page, bars included. `src/page.js` cancels what browsers do despite CSS: the long-press menu, selection, double tap and iOS Safari's pinch. Page zoom is off, but the game scales itself to the window and its text has a minimum size.
+
+The game sits inside the safe areas, so notches, home bars and browser bars cover nothing. `#game` is a fixed box inset by `env(safe-area-inset-*)`, and the screen shape comes from that box.
+
+Switching apps, locking the phone or clicking outside the window opens Pause during a match. Coming back leaves it paused until RESUME.
+
+To play the dev build on a phone on the same Wi-Fi, run `npm run dev -- --host` (port 5174) and open the computer's address. Under WSL2, Windows also needs a port proxy from 5174 to the WSL address, which can change after a restart, and a firewall rule allowing it.
+
 ### Debug keys
 
 In a match, dev builds only (`src/debug/`, keys in `src/config/display.js`):
@@ -84,9 +96,10 @@ For the 6-step chain, move the pair to the left wall and drop it. Setting a pair
 npx playwright install chromium   # once
 npm run e2e                       # browser tests against dev and production builds
 npm run record -- [out.webm]      # video of a whole Endless match, about a minute; needs `npm run dev` running
+npm run record -- --touch         # the same on an upright phone (390×844), menus and pause by touch
 ```
 
-`npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock. For gameplay, `startStopped` starts a match on a seed with its clock stopped and `advance` runs an exact number of ticks. For another orientation, set the viewport size; `e2e/responsive.spec.js` has helpers. `e2e/touch.spec.js` sends real touch events through Chromium; `fingers` in `e2e/support.js` presses, drags and lifts several. A page with a touch screen starts in touch mode, but starting a match with `startStopped` switches to keyboard mode, so call `useTouch` after it. `e2e/touch-flow.spec.js` plays the whole loop by touch. `e2e/landscape.spec.js` fails if anything moves at 960×540 in keyboard mode; if that's intended, run `UPDATE_LANDSCAPE=1 npx playwright test landscape` and review the diff.
+`npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock. For gameplay, `startStopped` starts a match on a seed with its clock stopped and `advance` runs an exact number of ticks. For another orientation, set the viewport size; `e2e/responsive.spec.js` has helpers. `e2e/touch.spec.js` sends real touch events through Chromium; `fingers` in `e2e/support.js` presses, drags and lifts several. A page with a touch screen starts in touch mode, but starting a match with `startStopped` switches to keyboard mode, so call `useTouch` after it. `e2e/touch-flow.spec.js` plays the whole loop by touch. `e2e/page.spec.js` and `e2e/safe-area.spec.js` emulate a phone (`isMobile`): pinches, drags and long presses on the bars, and notch insets through Chromium's `Emulation.setSafeAreaInsetsOverride`. Tests block the browser's own focus changes (`ignoreWindowBlur`), since a lost focus pauses; `blurWindow` and `setHidden` in `e2e/support.js` send them on purpose (`e2e/focus.spec.js`). `e2e/landscape.spec.js` fails if anything moves at 960×540 in keyboard mode; if that's intended, run `UPDATE_LANDSCAPE=1 npx playwright test landscape` and review the diff.
 
 GitHub Actions runs check, build and e2e on every push and pull request; a failed run keeps its report and videos for 14 days.
 

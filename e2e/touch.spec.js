@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
   advance,
   advanceToEnd,
+  clickButton,
   fingers,
   holdKey,
   matchState,
@@ -202,6 +203,11 @@ test('losing focus and layout changes release the finger', async ({ page }) => {
   await page.evaluate(() => window.__GAME__.events.emit('blur'));
   expect(await gesture(page)).toEqual(NONE);
   await finger.lift();
+  // A focus loss also pauses.
+  await waitForScene(page, 'Pause');
+  await clickButton(page, 'Pause', 'resumeButton');
+  await page.waitForFunction(() => !window.__GAME__.scene.isActive('Pause'));
+  await waitFrames(page);
 
   await finger.press(x, y);
   await finger.drag(0, 60);

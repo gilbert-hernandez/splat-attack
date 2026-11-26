@@ -39,7 +39,7 @@ export default class PreloadScene extends Phaser.Scene {
     onLayout(this, ({ preload }) => {
       bar = preload.bar;
       const { x, y, width, height } = bar;
-      placeText(text, { x, y: y - 24 });
+      placeText(text, preload.text);
       outline
         .clear()
         .lineStyle(2, 0xffffff, 1)

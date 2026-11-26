@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BOARD, RULES, VIEW } from '../../src/config/index.js';
+import { BOARD, RULES, TEXT, VIEW } from '../../src/config/index.js';
 import { layoutFor, screenFor } from '../../src/layout/layout.js';
 
 describe('screenFor', () => {
@@ -117,14 +117,29 @@ describe('landscape match in touch mode', () => {
   });
 });
 
-it('touch mode moves only the landscape Ladder boards', () => {
+/** A layout without its text sizes and the result's places, which touch mode changes in landscape. */
+function withoutText(layout) {
+  const strip = (part) => {
+    if (typeof part !== 'object' || part === null) return part;
+    const out = {};
+    for (const [key, value] of Object.entries(part))
+      if (!['size', 'wrap', 'spacing'].includes(key)) out[key] = strip(value);
+    return out;
+  };
+  const { result: _result, ...rest } = layout;
+  return strip(rest);
+}
+
+it('touch mode moves only the landscape Ladder boards, text and result', () => {
   const { touch, ...keyboard } = /** @type {any} */ (landscape('keyboard'));
   const touched = landscape('touch');
   expect(touched.mode).toBe('touch');
   expect(touched.match.ladder.player.x).toBe(136);
-  expect({ ...touched, mode: 'keyboard', match: { ...touched.match, ladder: keyboard.match.ladder } }).toEqual(
-    keyboard,
-  );
+  expect(
+    withoutText({ ...touched, mode: 'keyboard', match: { ...touched.match, ladder: keyboard.match.ladder } }),
+  ).toEqual(withoutText(keyboard));
+  // The result moves only up and down.
+  for (const [name, place] of Object.entries(touched.result)) expect(place.x, name).toBe(keyboard.result[name].x);
   expect(touch).toBeUndefined();
   const { mode: _a, ...tallTouch } = portrait(700, 'touch');
   const { mode: _b, ...tallKeys } = portrait(700, 'keyboard');
@@ -161,4 +176,41 @@ it('both orientations place the same things', () => {
         .sort();
     expect(names(tall), key).toEqual(names(wide));
   }
+});
+
+describe('text is readable on the smallest windows', () => {
+  // Every place that shows text, by part. The debug hint is for developers and exempt.
+  const TEXTS = {
+    preload: ['text'],
+    title: ['logo', 'start', 'hint', 'version'],
+    modeSelect: ['heading', 'ladder', 'endless', 'back'],
+    pause: ['heading', 'resume', 'quit'],
+    result: ['heading', 'mode', 'score', 'stats', 'again', 'title'],
+    ui: ['mode', 'score', 'level'],
+  };
+  /** @type {['portrait' | 'landscape', import('../../src/layout/layout.js').Mode][]} */
+  const cases = [
+    ['portrait', 'keyboard'],
+    ['portrait', 'touch'],
+    ['landscape', 'touch'],
+  ];
+  it.each(cases)('%s in %s mode', (orientation, mode) => {
+    const [w, h] = TEXT.smallestWindows[orientation];
+    const screen = screenFor(w, h);
+    expect(screen?.orientation).toBe(orientation);
+    const scale = Math.min(w / screen.width, h / screen.height);
+    const layout = layoutFor(screen, mode);
+    for (const [part, names] of Object.entries(TEXTS)) {
+      for (const name of names) {
+        const { size } = layout[part][name];
+        expect(size, `${part}.${name}`).toBeGreaterThan(0);
+        expect(size * scale, `${part}.${name}`).toBeGreaterThanOrEqual(TEXT.minCssPx);
+      }
+    }
+  });
+
+  it('keyboard landscape keeps its sizes', () => {
+    const { title, ui, result } = landscape('keyboard');
+    expect([title.hint.size, title.start.size, ui.score.size, result.stats.size]).toEqual([14, 18, 20, 16]);
+  });
 });

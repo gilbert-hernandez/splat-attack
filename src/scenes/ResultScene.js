@@ -40,8 +40,8 @@ export default class ResultScene extends Phaser.Scene {
       placeText(heading, result.heading);
       placeText(mode, result.mode);
       placeText(this.scoreText, result.score);
-      const { x, y, spacing } = result.stats;
-      this.statTexts.forEach((row, i) => placeText(row, { x, y: y + i * spacing }));
+      const { x, y, spacing, size } = result.stats;
+      this.statTexts.forEach((row, i) => placeText(row, { x, y: y + i * spacing, size }));
       this.againButton.place(result.again);
       this.titleButton.place(result.title);
     });

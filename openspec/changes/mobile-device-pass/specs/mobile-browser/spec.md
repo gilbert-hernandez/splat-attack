@@ -10,7 +10,7 @@ On the whole page, including the bars around the canvas, the browser SHALL NOT s
 - **THEN** the page's zoom stays 1
 
 #### Scenario: Drag on the letterbox
-- **WHEN** a finger drags down on the bar above the canvas
+- **WHEN** a finger drags down on a bar beside the canvas
 - **THEN** the page doesn't scroll or refresh
 
 #### Scenario: Long press

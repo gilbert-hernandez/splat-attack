@@ -47,3 +47,14 @@ The manifest SHALL declare portrait versions of the five wall backgrounds, the t
 #### Scenario: Rotate on the title
 - **WHEN** the window rotates to portrait on the title
 - **THEN** the portrait logo and background are used, or their fallbacks while the files are missing
+
+### Requirement: Touch art
+The manifest and ASSETS.md SHALL declare the touch button (normal and pressed) and the clockwise, counterclockwise, pause and meter icons. While an icon's file is missing, its button SHALL show a readable symbol instead.
+
+#### Scenario: Icons not delivered
+- **WHEN** a match is shown in touch mode without the icon files
+- **THEN** each button shows a symbol that tells it apart
+
+#### Scenario: Icon delivered
+- **WHEN** the correctly named icon is added and the game reloads
+- **THEN** the button shows the icon and no symbol

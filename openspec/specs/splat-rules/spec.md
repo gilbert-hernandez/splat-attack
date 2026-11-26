@@ -63,7 +63,7 @@ Each chain step SHALL add points that rise with splat size, number of colors in 
 - **THEN** their extra points are multiplied by step 2's chain bonus
 
 ### Requirement: Events
-Each tick SHALL report what happened: lock, settle, splat, gunk hit, attack, gunk drop, chain end and match over. Events SHALL be enough to draw every removal, fall, stain, gunk crack and gunk clear, and SHALL NOT be part of the match state.
+Each tick SHALL report what happened: lock, settle, splat, gunk hit, attack, gunk drop, meter fill, Rinse, Bomb, chain end and match over. Events SHALL be enough to draw every removal, fall, stain, gunk crack and gunk clear, including a Bomb's, and SHALL NOT be part of the match state.
 
 #### Scenario: Splat event
 - **WHEN** a chain step splats
@@ -81,9 +81,21 @@ Each tick SHALL report what happened: lock, settle, splat, gunk hit, attack, gun
 - **WHEN** pending gunk drops
 - **THEN** one event lists each gunk's column and landing row
 
+#### Scenario: Meter event
+- **WHEN** a chain step fills the meter
+- **THEN** one event gives the fill added and the meter after
+
+#### Scenario: Rinse event
+- **WHEN** a board fires Rinse
+- **THEN** one event gives how much pending gunk was removed
+
+#### Scenario: Bomb event
+- **WHEN** a Bomb goes off
+- **THEN** one event gives the target, the cleared cells with what was in each, and the stain color, followed by a settle event with the falls
+
 #### Scenario: Reconstruction
 - **WHEN** a viewer applies every event to an empty board with clean stains
-- **THEN** its board, gunk and stains match the engine's after every tick
+- **THEN** its board, gunk and stains match the engine's after every tick, Bombs included
 
 #### Scenario: Ignored events
 - **WHEN** the caller ignores or changes the returned events

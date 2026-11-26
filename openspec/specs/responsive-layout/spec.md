@@ -36,11 +36,11 @@ Every scene SHALL take its positions from a layout configuration, and everything
 - **THEN** all of its text and buttons are inside the screen and its buttons work
 
 ### Requirement: Portrait match
-A portrait match SHALL show the player's board at 1× with the next pairs beside it. The layout SHALL reserve separate areas for the player's pending gunk, the meter, a pause button and at least 120 px of touch controls below the board. In Ladder the rival's pending gunk SHALL have its own place next to the rival's board. These areas, the boards, the next pairs and the HUD SHALL NOT overlap at any portrait height.
+A portrait match SHALL show the player's board at 1× with the next pairs beside it. The layout SHALL reserve separate areas for the player's pending gunk, the meter, a pause button and at least 120 px of touch controls below the board. In Ladder the rival's pending gunk and the rival's meter SHALL each have their own place next to the rival's board. These areas, the boards, the next pairs and the HUD SHALL NOT overlap at any portrait height.
 
 #### Scenario: Ladder
 - **WHEN** a Ladder match is shown in portrait
-- **THEN** the rival's board is also shown, at half size, with its pending gunk beside it
+- **THEN** the rival's board is also shown, at half size, with its pending gunk and meter beside it
 
 #### Scenario: Endless
 - **WHEN** an Endless match is shown in portrait
@@ -77,7 +77,7 @@ Rotating during a match SHALL keep the match state, its seed and its replay, and
 - **THEN** the match re-lays out and keeps playing
 
 ### Requirement: Touch layouts
-The layout SHALL place the match buttons and reserve a slot for the meter button: the rotate buttons and the slot below the board in portrait, and all of them beside the boards in landscape. In landscape touch mode the Ladder boards SHALL move inward to make room. No tap target SHALL overlap another, a board, the next pairs, the HUD, or an area reserved for something else.
+The layout SHALL place the match buttons, the meter button included: the rotate and meter buttons below the board in portrait, and all of them beside the boards in landscape. In landscape touch mode the Ladder boards SHALL move inward to make room. No tap target SHALL overlap another, a board, the next pairs, the HUD, or an area reserved for something else.
 
 #### Scenario: Landscape Ladder in touch mode
 - **WHEN** a Ladder match is shown in landscape in touch mode
@@ -89,7 +89,7 @@ The layout SHALL place the match buttons and reserve a slot for the meter button
 
 #### Scenario: Tall phone
 - **WHEN** a match is shown at any portrait height
-- **THEN** the rotate buttons and meter slot are inside the touch area below the board
+- **THEN** the rotate and meter buttons are inside the touch area below the board
 
 ### Requirement: Landscape pending gunk
 A landscape Ladder match SHALL show each board's pending gunk directly above that board, in keyboard and touch layouts, without overlapping the HUD, the touch buttons or either board.
@@ -97,3 +97,18 @@ A landscape Ladder match SHALL show each board's pending gunk directly above tha
 #### Scenario: Keyboard and touch
 - **WHEN** a landscape Ladder match is shown in either input mode
 - **THEN** each pending display sits above its own board and overlaps nothing
+
+### Requirement: Meter places
+Every match layout SHALL place each board's meter: in portrait the player's in the reserved meter area and the rival's next to the rival's board, and in landscape each directly below its own board, in Ladder and Endless and in both input modes. The meter choice panel SHALL have a place over the player's board in every layout. Meters SHALL NOT overlap the boards, the next pairs, the HUD, the pending gunk, the touch buttons or the debug hint.
+
+#### Scenario: Landscape
+- **WHEN** a landscape Ladder or Endless match is shown in either input mode
+- **THEN** each meter sits below its own board and overlaps nothing
+
+#### Scenario: Portrait at any height
+- **WHEN** a portrait Ladder match is shown at any supported height
+- **THEN** both meters are shown and overlap nothing
+
+#### Scenario: Choice panel
+- **WHEN** the meter choice is open in any layout
+- **THEN** its panel is over the player's board and inside the screen

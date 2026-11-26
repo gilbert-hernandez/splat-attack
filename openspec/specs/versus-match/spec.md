@@ -112,7 +112,7 @@ A board that tops out SHALL lose and the other SHALL win. If both boards top out
 - **THEN** both boards, their pending gunk and the outcome stay the same
 
 ### Requirement: Sparring rival
-Until the CPU rivals arrive, the Ladder rival's board SHALL be played by a sparring rival that chooses moves only from the match state, with no randomness from outside the match and no clock, and gives its moves as the same per-tick input as a player. It SHALL act no faster than a configured pace.
+Until the CPU rivals arrive, the Ladder rival's board SHALL be played by a sparring rival that chooses moves only from the match state, with no randomness from outside the match and no clock, and gives its moves as the same per-tick input as a player. It SHALL act no faster than a configured pace, and MAY fire the meter by the sparring rival's meter rules.
 
 #### Scenario: Reproducible
 - **WHEN** the sparring rival plays the same match state twice
@@ -124,4 +124,4 @@ Until the CPU rivals arrive, the Ladder rival's board SHALL be played by a sparr
 
 #### Scenario: Plays to the end
 - **WHEN** the sparring rival plays a whole match against a slower-paced copy of itself
-- **THEN** it splats, sends gunk, and the match ends with an outcome
+- **THEN** it splats, sends gunk, fires the meter, and the match ends with an outcome

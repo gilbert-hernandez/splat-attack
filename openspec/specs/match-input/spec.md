@@ -6,7 +6,7 @@ Defines the match controls and how real time and key presses become engine ticks
 ## Requirements
 
 ### Requirement: Controls
-A/D and ←/→ SHALL move, S and ↓ SHALL soft drop while held, E and X SHALL rotate clockwise, and Q and Z SHALL rotate counterclockwise, by key position. Keys SHALL NOT scroll the page.
+A/D and ←/→ SHALL move, S and ↓ SHALL soft drop while held, E and X SHALL rotate clockwise, Q and Z SHALL rotate counterclockwise, and Space SHALL open and close the meter choice, by key position. While the meter choice is open, A, ←, Q and Z SHALL pick Rinse and D, →, E and X SHALL pick Bomb instead of moving or rotating. Keys SHALL NOT scroll the page.
 
 #### Scenario: Two keys for one action
 - **WHEN** A and ← are held and one is released
@@ -15,6 +15,18 @@ A/D and ←/→ SHALL move, S and ↓ SHALL soft drop while held, E and X SHALL 
 #### Scenario: Quick tap
 - **WHEN** a move or rotate key is pressed and released between two ticks
 - **THEN** it acts once on the next tick
+
+#### Scenario: Picking in the choice
+- **WHEN** the meter choice is open and → is pressed
+- **THEN** Bomb fires on the next tick and the pair doesn't move
+
+#### Scenario: Held key when the choice opens
+- **WHEN** ← is held and Space opens the meter choice
+- **THEN** the pair stops moving and nothing is picked until a key is pressed again
+
+#### Scenario: Space with the meter not full
+- **WHEN** Space is pressed while the meter isn't full
+- **THEN** nothing happens
 
 ### Requirement: Held-key repeat
 A move key SHALL act on press, then repeat after a configured delay at a configured interval, in ticks. Rotation SHALL act once per press. The operating system's key repeat SHALL be ignored.
@@ -43,7 +55,7 @@ The match SHALL advance 60 ticks per second of real time at any display rate. Af
 - **THEN** the match doesn't skip ahead by that time
 
 ### Requirement: Pausing releases keys
-While paused the match SHALL NOT advance. Pausing SHALL release every key and touch, and drop presses and gestures not yet used. Losing window focus or hiding the page SHALL pause the match.
+While paused the match SHALL NOT advance. Pausing SHALL release every key and touch, drop presses and gestures not yet used, and close the meter choice without firing. Losing window focus or hiding the page SHALL pause the match.
 
 #### Scenario: Key released while paused
 - **WHEN** a move key is held, the match is paused, the key is released and the match resumes
@@ -56,6 +68,10 @@ While paused the match SHALL NOT advance. Pausing SHALL release every key and to
 #### Scenario: Key held through a focus loss
 - **WHEN** a move key is held, the window loses focus, and the match is resumed
 - **THEN** the pair doesn't move by itself
+
+#### Scenario: Choice open through a pause
+- **WHEN** the meter choice is open as the match pauses
+- **THEN** on resume the choice is closed, nothing has fired and the meter is still full
 
 ### Requirement: New seed per match
 Each match SHALL start from a fresh seed, and its inputs SHALL be recorded as a replay.

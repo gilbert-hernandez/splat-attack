@@ -12,12 +12,17 @@ export function createGrid() {
   return new Array(COLUMNS * ROWS).fill(EMPTY);
 }
 
+/** A cell's index in a grid-shaped array. */
+export function idOf(col, row) {
+  return row * COLUMNS + col;
+}
+
 export function cellAt(grid, col, row) {
-  return grid[row * COLUMNS + col];
+  return grid[idOf(col, row)];
 }
 
 export function setCell(grid, col, row, value) {
-  grid[row * COLUMNS + col] = value;
+  grid[idOf(col, row)] = value;
 }
 
 /** True when the cell is on the board and empty. */

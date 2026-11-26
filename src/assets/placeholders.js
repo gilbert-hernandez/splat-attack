@@ -13,6 +13,9 @@ export const CATEGORY_COLORS = {
 };
 
 const FRAME_BORDER = 8;
+// A stain's placeholder: a dim full-cell tile with a small, lighter mark of its color's shape.
+const STAIN_MARK = 12;
+const STAIN_MARK_SHADE = 0.3;
 
 /** Darken a #rrggbb color by `amount` (0..1). */
 export function shade(hex, amount) {
@@ -64,6 +67,15 @@ function drawFrame(ctx, x, entry, color, ticks) {
     ctx.fillRect(x, h - b, w, b);
     ctx.fillRect(x, b, b, h - 2 * b);
     ctx.fillRect(x + w - b, b, b, h - 2 * b);
+    return;
+  }
+  if (entry.category === 'stain') {
+    ctx.fillStyle = color;
+    ctx.fillRect(x, 0, w, h);
+    const left = x + (w - STAIN_MARK) / 2;
+    const top = (h - STAIN_MARK) / 2;
+    ctx.fillStyle = shade(entry.color ?? color, STAIN_MARK_SHADE);
+    for (const s of shapeSpans(entry.shape ?? 'square', STAIN_MARK)) ctx.fillRect(left + s.x, top + s.y, s.w, 1);
     return;
   }
   if (entry.shape) {

@@ -56,6 +56,35 @@ describe('placeholders', () => {
     }
   });
 
+  it('marks each stain with its color shape, so stains differ without hue', () => {
+    /** The pixels drawn in the mark's color, as "x,y". */
+    const mark = (name) => {
+      const calls = draw(asset(`stain_${name}`)).calls;
+      const set = new Set();
+      for (const r of calls.slice(1)) for (let x = r.x; x < r.x + r.w; x++) set.add(`${x},${r.y}`);
+      return set;
+    };
+    for (const a of COLORS) {
+      for (const b of COLORS) {
+        if (a === b) continue;
+        const [pa, pb] = [mark(a.name), mark(b.name)];
+        const different = [...pa].filter((p) => !pb.has(p)).length + [...pb].filter((p) => !pa.has(p)).length;
+        expect(different, `${a.name} vs ${b.name}`).toBeGreaterThan(10);
+      }
+    }
+  });
+
+  it('draws a stain as a dim full tile, unlike its bright blob shape', () => {
+    for (const { name, color } of COLORS) {
+      const [tile, ...mark] = draw(asset(`stain_${name}`)).calls;
+      expect(tile).toEqual({ x: 0, y: 0, w: 32, h: 32, color: shade(color, 0.6) });
+      expect(mark.every((r) => r.color !== color && r.color !== tile.color)).toBe(true);
+      // The blob has no full tile; its first span is narrower than the cell.
+      const [first] = draw(asset(`blob_${name}_idle`)).calls;
+      expect([first.w < 32, first.color]).toEqual([true, color]);
+    }
+  });
+
   it('leaves the board frame opening clear and sized to the board', () => {
     const e = asset('board_frame_player');
     const { columns, rows, cell, frameBorder: b } = BOARD;

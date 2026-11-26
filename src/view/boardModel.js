@@ -33,6 +33,8 @@ export default class BoardModel {
     this.blobs = new Map();
     /** @type {{color: number, col: number, row: number, start: number}[]} */
     this.splats = [];
+    // The wall as drawn: changes when a splat starts, so stains appear under the splat animation.
+    this.stains = [...state.stains];
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLUMNS; col++) {
         const color = cellAt(state.grid, col, row);
@@ -93,6 +95,7 @@ export default class BoardModel {
   splat(groups) {
     for (const { color, cells } of groups) {
       for (const { col, row } of cells) {
+        this.stains[idOf(col, row)] = color;
         this.blobs.delete(idOf(col, row));
         this.splats.push({ color, col, row, start: this.ticks });
       }
@@ -138,6 +141,18 @@ export default class BoardModel {
       return { color, anim: /** @type {const} */ ('splat'), frame, x: col, y: row };
     });
     return [...[...this.blobs.values()].map((blob) => this.drawBlob(blob)), ...splats];
+  }
+
+  /** Stained cells in the visible rows, under everything else. */
+  drawStains() {
+    const stains = [];
+    for (let row = RULES.hiddenRows; row < ROWS; row++) {
+      for (let col = 0; col < COLUMNS; col++) {
+        const color = this.stains[idOf(col, row)];
+        if (color !== EMPTY) stains.push({ col, row, color });
+      }
+    }
+    return stains;
   }
 
   /** Links between neighbors, at the center of their shared edge. */

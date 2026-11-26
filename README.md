@@ -30,7 +30,9 @@ npm run coverage       # unit-test coverage; HTML report in coverage/index.html
 
 `createState(seed)` starts a match and `step(state, input)` advances it one tick (60 per second) and returns that tick's events (lock, settle, splat, chain end, over) for rendering; `input` combines the `INPUT` bits. The same seed and inputs always give the same match. Lint fails if `src/core/` or `src/ai/` uses Phaser, randomness, the clock, browser globals or non-integer literals.
 
-Engine tests draw boards as text with `tests/core/fixtures.js`: `.` is empty, letters are colors (`r y g b p`), and the falling pair shows in uppercase.
+**The Wall:** each blob that splats stains its cell with its color (`state.stains`, shaped like the grid; gravity never moves it). A different color paints over a stain. A blob that splats on its own color's stain is a stain match: the stain stays and the step gains `scoring.stainPoints` per match before the color and chain bonuses (`src/config/rules.js`). Each group in a splat event lists its stain-match cells as `matched`.
+
+Engine tests draw boards as text with `tests/core/fixtures.js`: `.` is empty, letters are colors (`r y g b p`), and the falling pair shows in uppercase. Stain layers use the same letters, with `.` for a clean cell: `parseStains` and `renderStains`, or a third argument to `stateWith`.
 
 Replays (`src/core/replay.js`) store a match's seed and inputs. The ones in `tests/core/replays/` run in `npm test` and, through the browser tests, in Chromium; any change to the engine's state or results fails them. If the change is intended:
 
@@ -79,16 +81,16 @@ To play the dev build on a phone on the same Wi-Fi, run `npm run dev -- --host` 
 
 In a match, dev builds only (`src/debug/`, keys in `src/config/display.js`):
 
-| Key        | Does                                                              |
-| ---------- | ----------------------------------------------------------------- |
-| `1`–`5` ×2 | Sets the next pair: red, yellow, green, blue, purple; pivot first |
-| `B`        | Loads the next prepared board: 6-step chain, top-out, mid-game    |
-| `P`        | Freezes or unfreezes the clock                                    |
-| `.`        | Freezes and steps one tick                                        |
-| `F`        | Fast-forward (8×) on or off                                       |
-| `R`        | Forces the end                                                    |
+| Key        | Does                                                                   |
+| ---------- | ---------------------------------------------------------------------- |
+| `1`–`5` ×2 | Sets the next pair: red, yellow, green, blue, purple; pivot first      |
+| `B`        | Loads the next prepared board: 6-step chain, top-out, stains, mid-game |
+| `P`        | Freezes or unfreezes the clock                                         |
+| `.`        | Freezes and steps one tick                                             |
+| `F`        | Fast-forward (8×) on or off                                            |
+| `R`        | Forces the end                                                         |
 
-For the 6-step chain, move the pair to the left wall and drop it. Setting a pair, loading a board or forcing the end drops the match's replay.
+For the 6-step chain, move the pair to the left wall and drop it. On the stains board, drop the pair in place: it scores two stain matches (100 points) and paints over a blue stain. Setting a pair, loading a board or forcing the end drops the match's replay.
 
 ### Browser tests and videos
 

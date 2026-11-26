@@ -25,6 +25,13 @@ function drawnGrid(model) {
   return grid;
 }
 
+/** The stain layer as drawn. */
+function drawnStains(model) {
+  const stains = createGrid();
+  for (const { col, row, color } of model.drawStains()) stains[row * COLUMNS + col] = color;
+  return stains;
+}
+
 /** Runs a replay through a model on frozen states, checking it at every quiet tick. */
 function check(replay) {
   const model = new BoardModel(snapshot(createState(replay.seed)));
@@ -42,6 +49,8 @@ function check(replay) {
     model.drawBridges();
     model.drawGhost();
     model.drawPair();
+    // Stains change only on splat ticks, so they always equal the engine's.
+    expect(drawnStains(model)).toEqual(state.stains);
     count++;
     if (state.phase === 'falling' || state.phase === 'over') {
       quiet++;
@@ -108,6 +117,26 @@ describe('board model', () => {
     }
     expect([...frames]).toEqual([0, 1, 2, 3, 4]);
     expect(model.splats).toEqual([]);
+  });
+
+  it('shows stains from the splat tick, through falls and pauses', () => {
+    const state = stateWith('.g.....\nrrr....', { col: 3, row: 13, other: 2 }, 'b......\n.y.....');
+    const model = new BoardModel(state);
+    // Seeded from the state.
+    expect(model.drawStains()).toEqual([
+      { col: 0, row: 12, color: 4 },
+      { col: 1, row: 13, color: 2 },
+    ]);
+    model.tick(state, step(state, INPUT.SOFT_DROP));
+    while (state.phase === 'settling') model.tick(state, step(state));
+    expect(model.splats).toHaveLength(4);
+    const after = [0, 1, 2, 3].map((col) => ({ col, row: 13, color: 1 }));
+    expect(model.drawStains()).toEqual([{ col: 0, row: 12, color: 4 }, ...after]);
+    // Draws without ticking (paused) change nothing; the green falls past the stains.
+    expect(model.drawStains()).toEqual(model.drawStains());
+    while (state.phase !== 'falling') model.tick(state, step(state));
+    expect(model.drawStains()).toEqual([{ col: 0, row: 12, color: 4 }, ...after]);
+    expect(drawnStains(model)).toEqual(state.stains);
   });
 
   it('bridges resting neighbors of one color, not hidden ones or ones across the edge', () => {

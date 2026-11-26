@@ -4,6 +4,19 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.1.5] - 2026-11-25
+
+### Added
+
+- **The Wall** (SA-7): each blob that splats stains its cell with its color, and a different color paints over a stain. Stains stay in place while blobs fall past them, and a new match starts clean.
+- **Stain matches** (SA-7): a blob that splats on a stain of its own color keeps the stain and adds 10 points to its chain step, before the color and chain bonuses. Splat events list each group's stain-match cells for the attacks coming in SA-8.
+- **Stains on the board** (SA-7): drawn under the ghost and blobs at low contrast, from the moment a splat starts. Until the SA-20 art arrives, a stain is a dim tile with a small mark of its color's shape, so it reads without hue and never looks like a blob.
+- **Stain debug board** (SA-7): `B` now also loads a board where dropping the pair in place scores two stain matches and paints over a blue stain. Board fixtures can take a stain layer.
+
+### Changed
+
+- Scores now include stain matches, so the stored replays were regenerated. Greedy play scores 5,860 (was 5,475) and the mid-chain replay 3,895 (was 3,695); random play has no stain matches and is unchanged at 240. Every stored hash changed because the state gained `stains`.
+
 ## [0.1.4] - 2026-11-25
 
 ### Added

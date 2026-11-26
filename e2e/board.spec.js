@@ -189,7 +189,7 @@ test('Ladder has a live player board and an empty rival board', async ({ page })
     const { rivalView } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
     return [rivalView.x, ...Object.values(rivalView.pools).map((pool) => /** @type {any} */ (pool).sprites.length)];
   });
-  expect(rival).toEqual([672, 0, 0, 0, 0, 0]);
+  expect(rival).toEqual([672, 0, 0, 0, 0, 0, 0]);
 });
 
 test('each match has its own seed', async ({ page }) => {
@@ -240,12 +240,15 @@ for (const file of readdirSync(DIR)) {
       await advance(page, 12, 0);
     }
     await advance(page, 1, 0);
-    const { grid: cells } = await matchState(page);
-    const want = cells
-      .map((color, i) => ({ color, col: i % 7, row: Math.floor(i / 7) }))
-      .filter(({ color, row }) => color && row >= 2)
-      .map(({ color, col, row }) => `${COLOR[color]} ${cellX(col)} ${cellY(row)}`);
-    const got = (await drawn(page, 'blobs')).map((b) => `${b.key.split('_')[1]} ${b.x} ${b.y}`);
-    expect(got.sort()).toEqual(want.sort());
+    const { grid: cells, stains } = await matchState(page);
+    const visible = (layer) =>
+      layer
+        .map((color, i) => ({ color, col: i % 7, row: Math.floor(i / 7) }))
+        .filter(({ color, row }) => color && row >= 2)
+        .map(({ color, col, row }) => `${COLOR[color]} ${cellX(col)} ${cellY(row)}`);
+    const got = async (pool) => (await drawn(page, pool)).map((b) => `${b.key.split('_')[1]} ${b.x} ${b.y}`);
+    expect((await got('blobs')).sort()).toEqual(visible(cells).sort());
+    expect(stains.some(Boolean)).toBe(true);
+    expect((await got('stains')).sort()).toEqual(visible(stains).sort());
   });
 }

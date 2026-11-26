@@ -60,7 +60,7 @@ export const MANIFEST = [
   image('sa_gunk_whole.png', 32, 32, 'SA-20'),
   image('sa_gunk_cracked.png', 32, 32, 'SA-20'),
   sheet('sa_gunk_break.png', 32, 32, 5, 'SA-20'),
-  ...COLORS.map(({ name, color }) => image(`sa_stain_${name}.png`, 32, 32, 'SA-20', { color })),
+  ...COLORS.map(({ name, shape, color }) => image(`sa_stain_${name}.png`, 32, 32, 'SA-20', { shape, color })),
 
   // SA-21 FX
   sheet('sa_fx_burst.png', 64, 64, 6, 'SA-21'),

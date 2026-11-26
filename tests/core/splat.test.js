@@ -144,6 +144,8 @@ describe('chains', () => {
     finish(state);
     expect([state.chain, state.chainPoints]).toEqual([0, 0]);
     state.grid = parseBoard('.rrr...');
+    // The chain stained the bottom row; clean it so only the chain number is tested.
+    state.stains = createGrid();
     Object.assign(state.pair, { pivot: RED, other: BLUE, col: 0, row: ROWS - 1, orientation: UP });
     step(state, SOFT);
     const { events } = finish(state);
@@ -208,7 +210,8 @@ describe('events', () => {
     const { state } = lockLeft('.rrr...');
     const { events } = finish(state);
     expect(events.map((e) => e.type)).toEqual(['splat', 'settle', 'chainEnd']);
-    expect(events[0].groups).toEqual([{ color: RED, cells: [0, 1, 2, 3].map((col) => ({ col, row: ROWS - 1 })) }]);
+    const cells = [0, 1, 2, 3].map((col) => ({ col, row: ROWS - 1 }));
+    expect(events[0].groups).toEqual([{ color: RED, cells, matched: [] }]);
     expect(events[1].falls).toEqual([{ col: 0, from: ROWS - 2, to: ROWS - 1, color: BLUE }]);
   });
 
@@ -219,11 +222,13 @@ describe('events', () => {
     expect(step(state, SOFT)).toEqual([]);
   });
 
-  it('is enough to rebuild the board, over random matches', () => {
+  it('is enough to rebuild the board and stains, over random matches', () => {
     let splats = 0;
+    let matches = 0;
     for (let seed = 0; seed < 30; seed++) {
       const state = createState(seed);
       const view = createGrid();
+      const stains = createGrid();
       let rng = seed + 500;
       let last = null;
       while (state.phase !== 'over') {
@@ -231,14 +236,21 @@ describe('events', () => {
         rng = draw.rng;
         for (const event of step(state, draw.value)) {
           last = event;
-          if (event.type === 'splat') splats++;
+          if (event.type === 'splat') {
+            splats++;
+            matches += event.groups.reduce((sum, g) => sum + g.matched.length, 0);
+            for (const { color, cells } of event.groups)
+              for (const { col, row } of cells) setCell(stains, col, row, color);
+          }
           apply(view, event);
         }
         if (view.join() !== state.grid.join()) throw new Error(`seed ${seed} differs at tick ${state.tick}`);
+        if (stains.join() !== state.stains.join()) throw new Error(`seed ${seed} stains differ at tick ${state.tick}`);
       }
       expect(last).toEqual({ type: 'over', score: state.score });
     }
     expect(splats).toBeGreaterThan(20);
+    expect(matches).toBeGreaterThan(0);
   });
 
   it('cannot affect the match', () => {

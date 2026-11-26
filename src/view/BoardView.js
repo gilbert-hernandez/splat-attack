@@ -3,7 +3,7 @@ import { BOARD, FLOW, RULES, VIEW } from '../config/index.js';
 import BoardModel from './boardModel.js';
 import SpritePool from './SpritePool.js';
 
-const DEPTH = { fill: 0, ghost: 1, blobs: 2, bridges: 3, pair: 4, frame: 5, next: 6 };
+const DEPTH = { fill: 0, stains: 0.5, ghost: 1, blobs: 2, bridges: 3, pair: 4, frame: 5, next: 6 };
 const name = (color) => COLORS[color - 1].name;
 
 /** Draws one board. Without a state it's an empty board. */
@@ -26,6 +26,7 @@ export default class BoardView {
       .setDepth(DEPTH.fill);
     this.frame = scene.add.image(0, 0, frameKey).setOrigin(0).setDepth(DEPTH.frame);
     this.pools = {
+      stains: new SpritePool(scene, { depth: DEPTH.stains, alpha: VIEW.stainAlpha }),
       ghost: new SpritePool(scene, { depth: DEPTH.ghost, alpha: VIEW.ghostAlpha }),
       blobs: new SpritePool(scene, { depth: DEPTH.blobs }),
       bridges: new SpritePool(scene, { depth: DEPTH.bridges, origin: 0.5 }),
@@ -77,6 +78,9 @@ export default class BoardView {
     const { model, pools } = this;
     if (!model) return;
     for (const pool of Object.values(pools)) pool.begin();
+    for (const { col, row, color } of model.drawStains()) {
+      pools.stains.place(this.left(col), this.top(row), `stain_${name(color)}`, 0, this.scale);
+    }
     for (const { col, row, color } of model.drawGhost()) {
       pools.ghost.place(this.left(col), this.top(row), `blob_${name(color)}_idle`, 0, this.scale);
     }

@@ -4,6 +4,7 @@ import { fallSpeedAt, levelAt } from './level.js';
 import { UP, fallPair, isGrounded, movePair, otherCell, rotatePair } from './pair.js';
 import { nextInt, seedRng } from './rng.js';
 import { findGroups, splatPoints } from './splat.js';
+import { applyStains, createStains } from './stain.js';
 
 // The rules engine: createState(seed) starts a match, step(state, input) advances it one tick.
 // State is plain JSON data, all integers, so it can be copied, compared and replayed.
@@ -18,6 +19,7 @@ export const INPUT = { LEFT: 1, RIGHT: 2, ROTATE_CW: 4, ROTATE_CCW: 8, SOFT_DROP
  * @property {number} tick
  * @property {Phase} phase
  * @property {number[]} grid
+ * @property {number[]} stains the wall behind the grid: 0 (clean) or a color, never moved by gravity
  * @property {import('./pair.js').Pair | null} pair the falling pair (null unless falling)
  * @property {number[][]} queue next pairs, each [pivot, other]
  * @property {number} rng piece stream
@@ -30,7 +32,8 @@ export const INPUT = { LEFT: 1, RIGHT: 2, ROTATE_CW: 4, ROTATE_CCW: 8, SOFT_DROP
 
 /**
  * What happened in a tick, for rendering. Events aren't part of the state. A splat's blobs leave
- * the grid at once; a settle's falls start at once, and the grid already has their end positions.
+ * the grid at once and stain their cells with the group's color; a settle's falls start at once, and
+ * the grid already has their end positions.
  * @typedef {{type: 'lock', cells: {col: number, row: number, color: number}[]}
  *   | {type: 'settle', falls: {col: number, from: number, to: number, color: number}[]}
  *   | {type: 'splat', chain: number, groups: import('./splat.js').Group[], points: number}
@@ -51,6 +54,7 @@ export function createState(seed) {
     tick: 0,
     phase: 'falling',
     grid: createGrid(),
+    stains: createStains(),
     pair: null,
     queue: [],
     rng: seedRng(seed),
@@ -139,7 +143,9 @@ function resolve(state, events) {
   if (state.phase === 'over') events.push({ type: 'over', score: state.score });
 }
 
-function splat(state, groups, events) {
+function splat(state, found, events) {
+  const matched = applyStains(state.stains, found);
+  const groups = found.map((group, i) => ({ ...group, matched: matched[i] }));
   for (const { cells } of groups) {
     for (const { col, row } of cells) setCell(state.grid, col, row, EMPTY);
   }

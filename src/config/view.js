@@ -5,5 +5,7 @@ export const VIEW = {
   idleFrameTicks: 12,
   landFrameTicks: 3,
   ghostAlpha: 0.35,
+  // Stains are drawn under everything at this alpha, on top of their art's own low contrast.
+  stainAlpha: 0.5,
   nextBox: { width: 64, height: 96 },
 };

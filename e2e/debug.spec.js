@@ -38,14 +38,15 @@ test('B loads boards in turn and play continues', async ({ page }) => {
   await advance(page, 100, 16);
   const { queue } = await matchState(page);
   const counts = new Set();
-  for (let i = 0; i < 3; i++) {
+  // Every prepared board once (chain, top-out, stains, mid-game), so the next press wraps to chain.
+  for (let i = 0; i < 4; i++) {
     await press(page, 'KeyB');
     const state = await matchState(page);
     expect(state).toMatchObject({ phase: 'falling', queue, chain: 0, pair: { col: 3, row: 2 } });
     counts.add(state.grid.filter(Boolean).length);
     await advance(page, 1, 0);
   }
-  expect(counts.size).toBe(3);
+  expect(counts.size).toBe(4);
   expect((await runner(page)).hasReplay).toBe(false);
   const { pairs } = await matchState(page);
   await advance(page, 60, 16);

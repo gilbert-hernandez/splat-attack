@@ -30,5 +30,7 @@ export const RULES = {
     // Chain step k multiplies by chainPercent * k + chainGrowth * k * (k - 1) percent.
     chainPercent: 100,
     chainGrowth: 25,
+    // Per blob that splats on a stain of its own color, added before the color and chain bonuses.
+    stainPoints: 10,
   },
 };

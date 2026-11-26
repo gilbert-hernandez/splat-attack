@@ -55,16 +55,16 @@ Sizes are per frame (W×H).
 
 ### SA-20: Gunk and wall stains
 
-| Ticket | File                  | Size  | Frames | Notes                                    |
-| ------ | --------------------- | ----- | ------ | ---------------------------------------- |
-| SA-20  | `sa_gunk_whole.png`   | 32×32 | 1      | Dried paint; clearly not a blob          |
-| SA-20  | `sa_gunk_cracked.png` | 32×32 | 1      | One hit from breaking                    |
-| SA-20  | `sa_gunk_break.png`   | 32×32 | 5      | Crumbles away                            |
-| SA-20  | `sa_stain_red.png`    | 32×32 | 1      | Low contrast, blobs stay readable on top |
-| SA-20  | `sa_stain_yellow.png` | 32×32 | 1      | Low contrast, blobs stay readable on top |
-| SA-20  | `sa_stain_green.png`  | 32×32 | 1      | Low contrast, blobs stay readable on top |
-| SA-20  | `sa_stain_blue.png`   | 32×32 | 1      | Low contrast, blobs stay readable on top |
-| SA-20  | `sa_stain_purple.png` | 32×32 | 1      | Low contrast, blobs stay readable on top |
+| Ticket | File                  | Size  | Frames | Notes                                                                       |
+| ------ | --------------------- | ----- | ------ | --------------------------------------------------------------------------- |
+| SA-20  | `sa_gunk_whole.png`   | 32×32 | 1      | Dried paint; clearly not a blob                                             |
+| SA-20  | `sa_gunk_cracked.png` | 32×32 | 1      | One hit from breaking                                                       |
+| SA-20  | `sa_gunk_break.png`   | 32×32 | 5      | Crumbles away                                                               |
+| SA-20  | `sa_stain_red.png`    | 32×32 | 1      | Low contrast, blobs stay readable on top; keep a cue that works without hue |
+| SA-20  | `sa_stain_yellow.png` | 32×32 | 1      | Low contrast, blobs stay readable on top; keep a cue that works without hue |
+| SA-20  | `sa_stain_green.png`  | 32×32 | 1      | Low contrast, blobs stay readable on top; keep a cue that works without hue |
+| SA-20  | `sa_stain_blue.png`   | 32×32 | 1      | Low contrast, blobs stay readable on top; keep a cue that works without hue |
+| SA-20  | `sa_stain_purple.png` | 32×32 | 1      | Low contrast, blobs stay readable on top; keep a cue that works without hue |
 
 ### SA-21: FX
 

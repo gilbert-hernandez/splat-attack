@@ -88,6 +88,17 @@ describe('state hash', () => {
     for (const key of numbers) hashes.add(hashState({ ...state, [key]: state[key] + 1 }));
     expect(hashes.size).toBe(1 + state.grid.length + numbers.length);
   });
+
+  it('changes with any stain', () => {
+    const state = createState(4);
+    const hashes = new Set([hashState(state)]);
+    state.stains.forEach((_, i) => {
+      const other = structuredClone(state);
+      other.stains[i] = 2;
+      hashes.add(hashState(other));
+    });
+    expect(hashes.size).toBe(1 + state.stains.length);
+  });
 });
 
 const DIR = new URL('./replays/', import.meta.url);
@@ -107,5 +118,19 @@ describe('stored replays', () => {
     expect(results.some((r) => r.phase === 'over'), hint).toBe(true); // prettier-ignore
     expect(results.some((r) => r.longestChain >= 3), hint).toBe(true); // prettier-ignore
     expect(results.some((r) => r.phase === 'splatting' && r.chain >= 2), hint).toBe(true); // prettier-ignore
+  });
+
+  it('cover a stain match', () => {
+    const matches = stored.map(({ replay }) => {
+      let count = 0;
+      playReplay(replay, (_state, events) => {
+        for (const e of events) if (e.type === 'splat') for (const g of e.groups) count += g.matched.length;
+      });
+      return count;
+    });
+    expect(
+      matches.some((m) => m > 0),
+      'run: npm run replays -- --generate',
+    ).toBe(true);
   });
 });

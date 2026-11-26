@@ -7,6 +7,7 @@ import { COLUMNS, EMPTY, ROWS, cellAt } from './grid.js';
  * @typedef {object} Group
  * @property {number} color
  * @property {{col: number, row: number}[]} cells
+ * @property {{col: number, row: number}[]} [matched] the cells that splatted on their own stain
  */
 
 /**
@@ -56,10 +57,11 @@ function flood(grid, startCol, startRow, seen) {
  * @param {number} chain the step's number, from 1
  */
 export function splatPoints(groups, chain) {
-  const { blobPoints, extraBlobPoints, colorPercent, chainPercent, chainGrowth } = RULES.scoring;
+  const { blobPoints, extraBlobPoints, colorPercent, chainPercent, chainGrowth, stainPoints } = RULES.scoring;
   let base = 0;
-  for (const { cells } of groups) {
+  for (const { cells, matched = [] } of groups) {
     base += blobPoints * cells.length + extraBlobPoints * (cells.length - RULES.groupSize);
+    base += stainPoints * matched.length;
   }
   const colors = new Set(groups.map((g) => g.color)).size;
   const color = 100 + colorPercent * (colors - 1);

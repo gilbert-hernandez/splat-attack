@@ -1,7 +1,7 @@
 import { DEBUG, FLOW } from '../config/index.js';
 import { spawn } from '../core/engine.js';
 import { onLayout, placeText } from '../layout/manager.js';
-import { BOARDS, parseBoard } from './boards.js';
+import { BOARDS, parseBoard, parseStains } from './boards.js';
 
 /** Debug keys for a match. Only made in dev builds; the only code that edits a match's state. */
 export default class DebugKeys {
@@ -52,9 +52,10 @@ export default class DebugKeys {
     const { runner, view } = this.match;
     const { state } = runner;
     if (state.phase === 'over') return;
-    const { text, pair } = BOARDS[this.board];
+    const { text, pair, stains = '' } = BOARDS[this.board];
     this.board = (this.board + 1) % BOARDS.length;
     state.grid = parseBoard(text);
+    state.stains = parseStains(stains);
     Object.assign(state, { chain: 0, chainPoints: 0, wait: 0 });
     // The board's pair goes in front of the queue, so the preview stays as it was.
     state.queue.unshift([...pair]);

@@ -34,10 +34,10 @@ try {
   const page = await context.newPage();
   const show = (ms = 1500) => page.waitForTimeout(ms);
 
-  /** Plays the running match with scripts/greedy.js, or straight down, through the normal inputs. */
+  /** Plays the running match with the sparring rival's greedy player, or straight down, through the normal inputs. */
   const play = (greedy) =>
     page.evaluate(async (useGreedy) => {
-      const url = '/scripts/greedy.js';
+      const url = '/src/ai/sparring.js';
       const { greedyInput, planPair } = await import(/* @vite-ignore */ url);
       const { runner } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
       let pairs = 0;

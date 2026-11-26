@@ -1,7 +1,7 @@
 import { createState } from '../../src/core/engine.js';
 import { COLUMNS, EMPTY, ROWS, cellAt } from '../../src/core/grid.js';
 import { UP, otherCell } from '../../src/core/pair.js';
-import { LETTERS, lines, parseBoard, parseStains } from '../../src/debug/boards.js';
+import { GUNK_LETTERS, LETTERS, lines, parseBoard, parseStains } from '../../src/debug/boards.js';
 
 // Boards as text (see src/debug/boards.js). In rendered boards the falling pair is in uppercase.
 
@@ -14,7 +14,7 @@ export function renderBoard(grid, pair = null) {
     const line = [];
     for (let col = 0; col < COLUMNS; col++) {
       const color = cellAt(grid, col, row);
-      line.push(color === EMPTY ? '.' : LETTERS[color - 1]);
+      line.push(color === EMPTY ? '.' : (GUNK_LETTERS[color] ?? LETTERS[color - 1]));
     }
     rows.push(line);
   }

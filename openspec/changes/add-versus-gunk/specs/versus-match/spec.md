@@ -124,5 +124,5 @@ Until the CPU rivals arrive, the Ladder rival's board SHALL be played by a sparr
 - **THEN** it moves or rotates at most once per configured number of ticks, and soft-drops only once the pair is in place and a configured delay has passed
 
 #### Scenario: Plays to the end
-- **WHEN** the sparring rival plays a whole match against an idle player
+- **WHEN** the sparring rival plays a whole match against a slower-paced copy of itself
 - **THEN** it splats, sends gunk, and the match ends with an outcome

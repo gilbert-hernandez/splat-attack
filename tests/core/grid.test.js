@@ -25,6 +25,20 @@ describe('grid', () => {
     );
   });
 
+  it('drops gunk like blobs', () => {
+    const grid = parseBoard(`
+      #......
+      .......
+      r.+....
+      .......`);
+    applyGravity(grid);
+    expect(renderBoard(grid)).toBe(
+      board(`
+      #......
+      r.+....`),
+    );
+  });
+
   it('treats everything off the board as blocked', () => {
     const grid = parseBoard('.......');
     expect(isFree(grid, 0, 0)).toBe(true);
@@ -42,6 +56,11 @@ describe('grid', () => {
 describe('fixtures', () => {
   it('round-trips a full board', () => {
     const text = new Array(14).fill('rygbp.r').join('\n');
+    expect(renderBoard(parseBoard(text))).toBe(text);
+  });
+
+  it('round-trips whole and cracked gunk', () => {
+    const text = new Array(14).fill('#+r.+#b').join('\n');
     expect(renderBoard(parseBoard(text))).toBe(text);
   });
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RULES } from '../../src/config/rules.js';
 import { INPUT, createState, step } from '../../src/core/engine.js';
-import { COLUMNS, EMPTY, ROWS, cellAt, createGrid, setCell } from '../../src/core/grid.js';
+import { COLUMNS, CRACKED, EMPTY, GUNK, ROWS, cellAt, createGrid, setCell } from '../../src/core/grid.js';
 import { UP } from '../../src/core/pair.js';
 import { nextInt } from '../../src/core/rng.js';
 import { findGroups, splatPoints } from '../../src/core/splat.js';
@@ -29,6 +29,14 @@ describe('matching', () => {
     ['several colors', 'yyyy...\nrrrrggg\n....ggg', [[YELLOW, 4], [RED, 4], [GREEN, 6]]], // prettier-ignore
   ])('%s', (_name, text, expected) => {
     expect(sizes(text)).toEqual(expected);
+  });
+
+  it.each([
+    ['connected gunk', '####...\n+++....'],
+    ['four blobs joined only through gunk', 'rr#rr..'],
+    ['a column split by cracked gunk', 'r......\nr......\n+......\nr......\nr......'],
+  ])('never matches %s', (_name, text) => {
+    expect(sizes(text)).toEqual([]);
   });
 
   it('lists each cell once', () => {
@@ -222,9 +230,10 @@ describe('events', () => {
     expect(step(state, SOFT)).toEqual([]);
   });
 
-  it('is enough to rebuild the board and stains, over random matches', () => {
+  it('is enough to rebuild the board, gunk and stains, over random matches', () => {
     let splats = 0;
     let matches = 0;
+    const seen = { drop: 0, gunkHit: 0 };
     for (let seed = 0; seed < 30; seed++) {
       const state = createState(seed);
       const view = createGrid();
@@ -234,8 +243,11 @@ describe('events', () => {
       while (state.phase !== 'over') {
         const draw = nextInt(rng, 32);
         rng = draw.rng;
+        // Gunk now and then, as a rival would send it.
+        if (state.tick % 500 === 250) state.pending += 2 + (state.tick % 5);
         for (const event of step(state, draw.value)) {
           last = event;
+          if (event.type in seen) seen[event.type]++;
           if (event.type === 'splat') {
             splats++;
             matches += event.groups.reduce((sum, g) => sum + g.matched.length, 0);
@@ -251,6 +263,8 @@ describe('events', () => {
     }
     expect(splats).toBeGreaterThan(20);
     expect(matches).toBeGreaterThan(0);
+    expect(seen.drop).toBeGreaterThan(10);
+    expect(seen.gunkHit).toBeGreaterThan(0);
   });
 
   it('cannot affect the match', () => {
@@ -281,5 +295,10 @@ function apply(view, event) {
     for (const { col, from } of event.falls) setCell(view, col, from, EMPTY);
     for (const { col, to, color } of event.falls) setCell(view, col, to, color);
   }
+  if (event.type === 'gunkHit') {
+    for (const { col, row } of event.cracked) setCell(view, col, row, CRACKED);
+    for (const { col, row } of event.cleared) setCell(view, col, row, EMPTY);
+  }
+  if (event.type === 'drop') for (const { col, row } of event.cells) setCell(view, col, row, GUNK);
   expect(view).toHaveLength(COLUMNS * ROWS);
 }

@@ -3,16 +3,29 @@ import { hashState, playReplay } from '../src/core/replay.js';
 
 const CHECKPOINT_TICKS = 600;
 
-/** Plays a replay: its final numbers, and a state hash every CHECKPOINT_TICKS. */
+/**
+ * Plays a replay: its final numbers (the player's, in versus), and a state hash every
+ * CHECKPOINT_TICKS. Versus results add the outcome and the gunk cracked and cleared on both boards.
+ */
 export function replayResult(replay) {
   const checkpoints = [];
   let longestChain = 0;
-  const state = playReplay(replay, (current, events) => {
-    for (const event of events) if (event.type === 'splat') longestChain = Math.max(longestChain, event.chain);
+  const gunk = { cracks: 0, clears: 0 };
+  const match = playReplay(replay, (current, events) => {
+    const versus = 'boards' in current;
+    const player = versus ? events[0] : events;
+    for (const event of player) if (event.type === 'splat') longestChain = Math.max(longestChain, event.chain);
+    for (const event of versus ? events.flat() : []) {
+      if (event.type !== 'gunkHit') continue;
+      gunk.cracks += event.cracked.length;
+      gunk.clears += event.cleared.length;
+    }
     if (current.tick % CHECKPOINT_TICKS === 0) checkpoints.push(hashState(current));
   });
-  const { tick, phase, chain, score } = state;
-  return { ticks: tick, phase, chain, score, longestChain, hash: hashState(state), checkpoints };
+  const versus = 'boards' in match;
+  const { phase, chain, score } = versus ? match.boards[0] : match;
+  const result = { ticks: match.tick, phase, chain, score, longestChain, hash: hashState(match), checkpoints };
+  return versus ? { ...result, outcome: match.outcome, ...gunk } : result;
 }
 
 /** The first difference between an expected and an actual result, or null. */
@@ -23,7 +36,7 @@ export function firstDifference(expected, actual) {
       return `differs by tick ${(i + 1) * CHECKPOINT_TICKS}`;
     }
   }
-  for (const key of ['ticks', 'phase', 'chain', 'score', 'longestChain', 'hash']) {
+  for (const key of ['ticks', 'phase', 'chain', 'score', 'longestChain', 'outcome', 'cracks', 'clears', 'hash']) {
     if (expected[key] !== actual[key]) return `${key} is ${actual[key]}, expected ${expected[key]}`;
   }
   return null;

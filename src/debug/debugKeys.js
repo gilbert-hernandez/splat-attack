@@ -1,5 +1,6 @@
-import { DEBUG, FLOW } from '../config/index.js';
+import { DEBUG, FLOW, RULES } from '../config/index.js';
 import { spawn } from '../core/engine.js';
+import { forceTopOut } from '../core/versus.js';
 import { onLayout, placeText } from '../layout/manager.js';
 import { BOARDS, parseBoard, parseStains } from './boards.js';
 
@@ -34,7 +35,10 @@ export default class DebugKeys {
       runner.setFrozen(true);
       runner.advance(1);
     } else if (action === 'fast') runner.rate = runner.rate === 1 ? DEBUG.fastRate : 1;
-    else if (action === 'end') this.forceEnd();
+    else if (action === 'gunkPlayer') this.sendGunk(runner.state);
+    else if (action === 'gunkRival' && runner.rival) this.sendGunk(runner.rival);
+    else if (action === 'win' && runner.match) this.forceEnd(1);
+    else if (action === 'end') this.forceEnd(0);
   }
 
   pickColor(color) {
@@ -56,7 +60,7 @@ export default class DebugKeys {
     this.board = (this.board + 1) % BOARDS.length;
     state.grid = parseBoard(text);
     state.stains = parseStains(stains);
-    Object.assign(state, { chain: 0, chainPoints: 0, wait: 0 });
+    Object.assign(state, { chain: 0, chainPoints: 0, power: 0, dropped: false, wait: 0 });
     // The board's pair goes in front of the queue, so the preview stays as it was.
     state.queue.unshift([...pair]);
     spawn(state);
@@ -65,13 +69,25 @@ export default class DebugKeys {
     view.show(state);
   }
 
-  forceEnd() {
+  /** Adds a row of pending gunk to a board, which drops by the normal rules. */
+  sendGunk(board) {
     const { runner } = this.match;
-    const { state } = runner;
-    if (state.phase === 'over') return;
-    Object.assign(state, { phase: 'over', pair: null, wait: 0 });
+    if (runner.over) return;
+    board.pending += RULES.columns;
+    runner.dropReplay();
+  }
+
+  /** Tops out a board (0 = player, 1 = rival), and the match ends through the normal game-over. */
+  forceEnd(side) {
+    const { runner } = this.match;
+    if (runner.over) return;
+    const board = side === 0 ? runner.state : runner.rival;
+    if (runner.match) forceTopOut(runner.match, side);
+    else Object.assign(board, { phase: 'over', pair: null, wait: 0 });
     runner.dropReplay();
     runner.setFrozen(false);
-    runner.onTick(state, [{ type: 'over', score: state.score }]);
+    const over = [{ type: 'over', score: board.score }];
+    if (runner.match) runner.onTick(runner.state, side === 0 ? over : [], side === 1 ? over : []);
+    else runner.onTick(runner.state, over, null);
   }
 }

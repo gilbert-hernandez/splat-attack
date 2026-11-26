@@ -47,6 +47,17 @@ describe('debug boards', () => {
     expect(bottom).toEqual([0, 1, 1, 1, 1, 0, 0]);
   });
 
+  it('gunk cracks one gunk and clears another with the pair dropped at the left wall', () => {
+    const state = start('gunk');
+    for (let i = 0; i < 3; i++) step(state, INPUT.LEFT);
+    const { pairs } = state;
+    const hits = [];
+    while (state.pairs === pairs) hits.push(...step(state, INPUT.SOFT_DROP).filter((e) => e.type === 'gunkHit'));
+    expect(hits).toHaveLength(1);
+    expect(hits[0].cracked).toHaveLength(1);
+    expect(hits[0].cleared).toHaveLength(1);
+  });
+
   it('top-out ends with the pair dropped in place', () => {
     const state = start('top-out');
     for (let i = 0; i < 100; i++) step(state, INPUT.SOFT_DROP);

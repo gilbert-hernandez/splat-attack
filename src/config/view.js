@@ -8,4 +8,7 @@ export const VIEW = {
   // Stains are drawn under everything at this alpha, on top of their art's own low contrast.
   stainAlpha: 0.5,
   nextBox: { width: 64, height: 96 },
+  // Pending gunk: at most this many icons, each as tall as its strip, this far apart.
+  pendingIcons: 6,
+  pendingIconGap: 4,
 };

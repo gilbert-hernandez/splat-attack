@@ -3,7 +3,8 @@ import { COLUMNS, EMPTY, applyGravity, cellAt, createGrid, setCell } from './gri
 import { fallSpeedAt, levelAt } from './level.js';
 import { UP, fallPair, isGrounded, movePair, otherCell, rotatePair } from './pair.js';
 import { nextInt, seedRng } from './rng.js';
-import { findGroups, splatPoints } from './splat.js';
+import { dropGunk, gunkSeed, hitGunk } from './gunk.js';
+import { findGroups, splatPoints, splatPower } from './splat.js';
 import { applyStains, createStains } from './stain.js';
 
 // The rules engine: createState(seed) starts a match, step(state, input) advances it one tick.
@@ -28,15 +29,23 @@ export const INPUT = { LEFT: 1, RIGHT: 2, ROTATE_CW: 4, ROTATE_CCW: 8, SOFT_DROP
  * @property {number} chainPoints points so far in the current chain
  * @property {number} score
  * @property {number} pairs pairs spawned so far, including the falling one
+ * @property {number} power attack power so far in the current chain
+ * @property {number} pending gunk waiting to drop on this board
+ * @property {number} gunkRng stream for the columns gunk drops in
+ * @property {boolean} dropped true from a gunk drop until the next pair spawns
  */
 
 /**
  * What happened in a tick, for rendering. Events aren't part of the state. A splat's blobs leave
- * the grid at once and stain their cells with the group's color; a settle's falls start at once, and
- * the grid already has their end positions.
+ * the grid at once and stain their cells with the group's color; a gunk hit follows its splat, and
+ * cleared gunk leaves at once too. A settle's falls start at once, and the grid already has their
+ * end positions.
  * @typedef {{type: 'lock', cells: {col: number, row: number, color: number}[]}
  *   | {type: 'settle', falls: {col: number, from: number, to: number, color: number}[]}
  *   | {type: 'splat', chain: number, groups: import('./splat.js').Group[], points: number}
+ *   | {type: 'gunkHit', cracked: {col: number, row: number}[], cleared: {col: number, row: number}[]}
+ *   | {type: 'attack', gunk: number, cancelled: number, sent: number, pending: number}
+ *   | {type: 'drop', cells: {col: number, row: number}[]}
  *   | {type: 'chainEnd', chain: number, points: number}
  *   | {type: 'over', score: number}} Event
  */
@@ -46,9 +55,11 @@ export const SPAWN = { col: COLUMNS >> 1, row: RULES.hiddenRows };
 
 /**
  * @param {number} seed unsigned 32-bit integer
+ * @param {number} [side] 0 for the player, 1 for the rival: both get the same pairs, but different
+ *   gunk columns
  * @returns {State}
  */
-export function createState(seed) {
+export function createState(seed, side = 0) {
   /** @type {State} */
   const state = {
     tick: 0,
@@ -63,7 +74,12 @@ export function createState(seed) {
     chainPoints: 0,
     score: 0,
     pairs: 0,
+    power: 0,
+    pending: 0,
+    gunkRng: 0,
+    dropped: false,
   };
+  state.gunkRng = gunkSeed(state.rng, side);
   while (state.queue.length < RULES.nextPairs) state.queue.push(drawPair(state));
   spawn(state);
   return state;
@@ -129,18 +145,45 @@ function settle(state, events) {
   state.wait = RULES.settleTicks;
 }
 
-/** After a settle: splats the next chain step, or ends the chain and brings in the next pair. */
+/**
+ * After a settle: splats the next chain step, or ends the chain, drops pending gunk once, and brings
+ * in the next pair.
+ */
 function resolve(state, events) {
   const groups = findGroups(state.grid);
   if (groups.length > 0) {
     splat(state, groups, events);
     return;
   }
-  if (state.chain > 0) events.push({ type: 'chainEnd', chain: state.chain, points: state.chainPoints });
+  if (state.chain > 0) {
+    attack(state, events);
+    events.push({ type: 'chainEnd', chain: state.chain, points: state.chainPoints });
+  }
   state.chain = 0;
   state.chainPoints = 0;
+  state.power = 0;
+  if (state.pending > 0 && !state.dropped) {
+    events.push({ type: 'drop', cells: dropGunk(state) });
+    state.dropped = true;
+    state.phase = 'settling';
+    state.wait = RULES.settleTicks;
+    return;
+  }
+  state.dropped = false;
   spawn(state);
   if (state.phase === 'over') events.push({ type: 'over', score: state.score });
+}
+
+/**
+ * Turns the chain's power into gunk, which cancels this board's pending gunk first. The rest is
+ * `sent`: in versus it goes to the other board, in Endless nowhere.
+ */
+function attack(state, events) {
+  const gunk = Math.floor(state.power / RULES.attack.powerPerGunk);
+  if (gunk === 0) return;
+  const cancelled = Math.min(gunk, state.pending);
+  state.pending -= cancelled;
+  events.push({ type: 'attack', gunk, cancelled, sent: gunk - cancelled, pending: state.pending });
 }
 
 function splat(state, found, events) {
@@ -153,9 +196,12 @@ function splat(state, found, events) {
   const points = splatPoints(groups, state.chain);
   state.chainPoints += points;
   state.score += points;
+  state.power += splatPower(groups, state.chain);
   state.phase = 'splatting';
   state.wait = RULES.splatTicks;
   events.push({ type: 'splat', chain: state.chain, groups, points });
+  const hits = hitGunk(state.grid, groups);
+  if (hits.cracked.length > 0 || hits.cleared.length > 0) events.push({ type: 'gunkHit', ...hits });
 }
 
 /** Brings in the next pair, or ends the match if the spawn cell is blocked. Exported for debug tools. */

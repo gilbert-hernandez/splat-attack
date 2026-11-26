@@ -1,10 +1,12 @@
 // `npm run replays`: replays the stored inputs and rewrites their expected results, after an
-// intended rules change. `npm run replays -- --generate` also makes new inputs.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+// intended rules change. Missing replays are made; `npm run replays -- --generate` remakes them all.
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createSparring, greedyInput, planPair, sparringInput } from '../src/ai/sparring.js';
+import { RULES } from '../src/config/rules.js';
 import { createState, step } from '../src/core/engine.js';
-import { createReplay, recordInput } from '../src/core/replay.js';
+import { createReplay, packInputs, recordInput } from '../src/core/replay.js';
 import { nextInt } from '../src/core/rng.js';
-import { greedyInput, planPair } from './greedy.js';
+import { createVersus, stepVersus } from '../src/core/versus.js';
 import { replayResult } from './replayResult.js';
 
 const DIR = new URL('../tests/core/replays/', import.meta.url);
@@ -50,6 +52,20 @@ function greedy(seed, stop) {
   );
 }
 
+/** A versus match: an unpaced sparring player against the paced sparring rival. */
+function versus(seed) {
+  const replay = createReplay(seed, true);
+  const match = createVersus(seed);
+  const player = createSparring({ actEvery: 1, dropDelay: 0 });
+  const rival = createSparring(RULES.sparring);
+  while (match.outcome === null && match.tick < MAX_TICKS) {
+    const inputs = [sparringInput(player, match.boards[0]), sparringInput(rival, match.boards[1])];
+    recordInput(replay, match, packInputs(...inputs));
+    stepVersus(match, ...inputs);
+  }
+  return replay;
+}
+
 /** The first seed whose replay passes. */
 function find(make, accept) {
   for (let seed = 1; seed <= 500; seed++) {
@@ -60,6 +76,7 @@ function find(make, accept) {
 }
 
 const GENERATORS = {
+  versus: () => find(versus, (r) => r.outcome === 'win' && r.cracks > 0 && r.clears > 0),
   random: () => find(random, (r) => r.phase === 'over' && r.score > 0),
   greedy: () =>
     find(
@@ -77,8 +94,12 @@ const generate = process.argv.includes('--generate');
 mkdirSync(DIR, { recursive: true });
 for (const [name, make] of Object.entries(GENERATORS)) {
   const file = new URL(`${name}.json`, DIR);
-  const replay = generate ? make() : JSON.parse(readFileSync(file, 'utf8')).replay;
+  const replay = generate || !existsSync(file) ? make() : JSON.parse(readFileSync(file, 'utf8')).replay;
   const expected = replayResult(replay);
   writeFileSync(file, `{\n"expected": ${JSON.stringify(expected, null, 2)},\n"replay": ${JSON.stringify(replay)}\n}\n`);
-  console.log(`${name}: ${expected.ticks} ticks, score ${expected.score}, longest chain ${expected.longestChain}`);
+  const gunk =
+    'outcome' in expected ? `, ${expected.outcome}, ${expected.cracks} cracks, ${expected.clears} clears` : '';
+  console.log(
+    `${name}: ${expected.ticks} ticks, score ${expected.score}, longest chain ${expected.longestChain}${gunk}`,
+  );
 }

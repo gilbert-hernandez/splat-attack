@@ -17,8 +17,11 @@ export const DEBUG = {
     KeyP: 'freeze',
     Period: 'step',
     KeyF: 'fast',
+    KeyG: 'gunkPlayer',
+    KeyH: 'gunkRival',
+    KeyW: 'win',
     KeyR: 'end',
   },
-  hint: '1-5 twice: next pair · B board · P freeze · . step · F fast · R end',
+  hint: '1-5 twice: next pair · B board · P freeze · . step · F fast · G/H gunk you/rival · W win · R end',
   fastRate: 8,
 };

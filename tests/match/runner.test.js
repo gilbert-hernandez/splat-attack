@@ -3,6 +3,7 @@ import { CLOCK } from '../../src/config/input.js';
 import { hashState, playReplay } from '../../src/core/replay.js';
 import { nextInt, seedRng } from '../../src/core/rng.js';
 import MatchRunner from '../../src/match/runner.js';
+import { createSparring, sparringInput } from '../../src/ai/sparring.js';
 
 const idle = () => 0;
 
@@ -83,5 +84,65 @@ describe('match runner', () => {
     runner.dropReplay();
     runner.advance(5);
     expect([runner.replay, runner.state.tick]).toEqual([null, 5]);
+  });
+});
+
+describe('versus runner', () => {
+  const ladder = (options = {}) => {
+    const bot = createSparring();
+    return new MatchRunner({
+      seed: 5,
+      readInput: idle,
+      readRivalInput: (board) => sparringInput(bot, board),
+      ...options,
+    });
+  };
+
+  it("runs both boards and passes both sides' events", () => {
+    const seen = { player: 0, rival: 0 };
+    const runner = ladder({
+      onTick: (state, events, rivalEvents) => {
+        seen.player += events.length;
+        seen.rival += rivalEvents.length;
+        expect(state).toBe(runner.state);
+      },
+    });
+    for (let i = 0; i < 300; i++) runner.update(1000 / 60);
+    expect(runner.match.tick).toBe(300);
+    expect(runner.state).toBe(runner.match.boards[0]);
+    expect(runner.rival).toBe(runner.match.boards[1]);
+    expect(runner.rival.pairs).toBeGreaterThan(1);
+    expect(seen.rival).toBeGreaterThan(0);
+  });
+
+  it('records a versus replay that plays back to the same match', () => {
+    const runner = ladder({ readInput: () => 16 });
+    runner.rate = 8;
+    for (let i = 0; i < 2000 && !runner.over; i++) runner.update(1000 / 60);
+    expect(runner.over).toBe(true);
+    expect(runner.outcome).toBe('loss');
+    expect(runner.replay.format).toBe(2);
+    const played = playReplay(JSON.parse(JSON.stringify(runner.replay)));
+    expect(hashState(played)).toBe(hashState(runner.match));
+  });
+
+  it('keeps calling onTick after the outcome, with no events', () => {
+    let last = null;
+    const runner = ladder({ readInput: () => 16, onTick: (...args) => (last = args) });
+    while (!runner.over) runner.advance(1);
+    runner.advance(3);
+    expect(last.slice(1)).toEqual([[], []]);
+  });
+
+  it('can drop its replay and keep ticking', () => {
+    const runner = ladder();
+    runner.dropReplay();
+    runner.advance(5);
+    expect([runner.replay, runner.match.tick]).toEqual([null, 5]);
+  });
+
+  it('is solo without a rival', () => {
+    const runner = new MatchRunner({ seed: 1, readInput: idle });
+    expect([runner.match, runner.rival, runner.outcome, runner.replay.format]).toEqual([null, null, null, 1]);
   });
 });

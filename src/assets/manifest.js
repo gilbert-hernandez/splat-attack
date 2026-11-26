@@ -57,8 +57,8 @@ export const MANIFEST = [
   ]),
 
   // SA-20 Gunk and wall stains
-  image('sa_gunk_whole.png', 32, 32, 'SA-20'),
-  image('sa_gunk_cracked.png', 32, 32, 'SA-20'),
+  image('sa_gunk_whole.png', 32, 32, 'SA-20', { shape: 'crust' }),
+  image('sa_gunk_cracked.png', 32, 32, 'SA-20', { shape: 'cracked' }),
   sheet('sa_gunk_break.png', 32, 32, 5, 'SA-20'),
   ...COLORS.map(({ name, shape, color }) => image(`sa_stain_${name}.png`, 32, 32, 'SA-20', { shape, color })),
 

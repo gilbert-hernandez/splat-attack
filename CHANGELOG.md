@@ -4,6 +4,24 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.1.6] - 2026-11-25
+
+### Added
+
+- **Versus** (SA-8): Ladder is now a real two-board match against a rival. Both boards get the same pairs from one seed and follow the same rules, and the same seed and inputs give the same match in browsers and Node.
+- **Attacks** (SA-8): each chain step builds attack power from its blobs and stain matches, rising with the chain. When the chain ends, the power turns into gunk. A single four sends nothing, and chains of fours send 2, 4, 8 and 14 gunk for 2 to 5 steps. Your gunk cancels incoming gunk first. All values are in `RULES.attack`.
+- **Gunk** (SA-8): pending gunk drops after your pair and chain, at most 28 at a time, full rows first and then in seeded columns. It never matches. A splat next to it cracks it, and a second clears it.
+- **Win, loss and draw** (SA-8): a board that tops out loses, and if both top out on the same tick it's a draw. Ladder shows YOU WIN, YOU LOSE or DRAW, and the result shows WIN, LOSS or DRAW and the gunk you sent.
+- **Sparring rival** (SA-8): a paced one-ply greedy player plays the rival's board until the CPU rivals arrive in SA-10. It also generates the stored replays.
+- **Pending gunk display** (SA-8): each board shows its pending gunk above it in landscape. In portrait, yours is in the gunk area and the rival's is under its board. Gunk and cracked gunk have their own placeholders.
+- **Debug** (SA-8): `G` and `H` send a row of gunk to you or to the rival, and `W` wins a Ladder match. `B` adds a gunk board. Board fixtures use `#` for gunk and `+` for cracked gunk.
+
+### Changed
+
+- Replays have a second format for versus, holding both sides' inputs. A new stored versus replay ends in a win with 47 cracks and 45 clears. Every stored hash changed because the board state gained gunk fields. The Endless replays' scores are unchanged (5,860, 3,895 and 240).
+- `R` now tops out your board, and a Ladder match also ends when the rival tops out.
+- `scripts/greedy.js` moved to `src/ai/sparring.js`.
+
 ## [0.1.5] - 2026-11-25
 
 ### Added

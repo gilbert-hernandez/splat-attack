@@ -42,12 +42,16 @@
     "Sprite blob_blue_idle 160,128 32x32 origin 0,0 depth 4",
     "Sprite blob_blue_idle 160,420 32x32 origin 0,0 depth 1",
     "Sprite blob_blue_idle 320,252 32x32 origin 0,0 depth 6",
+    "Sprite blob_blue_idle 704,325 32x32 origin 0,0 depth 4",
+    "Sprite blob_blue_idle 704,452 32x32 origin 0,0 depth 1",
     "Sprite blob_green_idle 160,160 32x32 origin 0,0 depth 4",
     "Sprite blob_green_idle 160,452 32x32 origin 0,0 depth 1",
     "Sprite blob_green_idle 320,148 32x32 origin 0,0 depth 6",
     "Sprite blob_green_idle 320,220 32x32 origin 0,0 depth 6",
+    "Sprite blob_green_idle 672,325 32x32 origin 0,0 depth 4",
+    "Sprite blob_green_idle 672,452 32x32 origin 0,0 depth 1",
     "Sprite blob_yellow_idle 320,116 32x32 origin 0,0 depth 6",
-    "Text 1-5 twice: next pair · B board · P freeze · . step · F fast · R end 480,528 12px origin 0.5,0.5 depth 0",
+    "Text 1-5 twice: next pair · B board · P freeze · . step · F fast · G/H gunk you/rival · W win · R end 480,528 12px origin 0.5,0.5 depth 0",
     "Text GAME 176,270 48px origin 0.5,0.5 depth 100 hidden",
     "Text [Match] 4,4 12px origin 0,0 depth 10000"
   ],
@@ -92,7 +96,7 @@
     "Sprite blob_green_idle 624,148 32x32 origin 0,0 depth 6",
     "Sprite blob_green_idle 624,220 32x32 origin 0,0 depth 6",
     "Sprite blob_yellow_idle 624,116 32x32 origin 0,0 depth 6",
-    "Text 1-5 twice: next pair · B board · P freeze · . step · F fast · R end 480,528 12px origin 0.5,0.5 depth 0",
+    "Text 1-5 twice: next pair · B board · P freeze · . step · F fast · G/H gunk you/rival · W win · R end 480,528 12px origin 0.5,0.5 depth 0",
     "Text GAME 480,270 48px origin 0.5,0.5 depth 100 hidden",
     "Text [Match] 4,4 12px origin 0,0 depth 10000"
   ],
@@ -139,7 +143,7 @@
     "Sprite blob_red_idle 464,228 32x32 origin 0,0 depth 2",
     "Sprite blob_red_idle 624,252 32x32 origin 0,0 depth 6",
     "Sprite blob_yellow_idle 464,356 32x32 origin 0,0 depth 2",
-    "Text 1-5 twice: next pair · B board · P freeze · . step · F fast · R end 480,528 12px origin 0.5,0.5 depth 0",
+    "Text 1-5 twice: next pair · B board · P freeze · . step · F fast · G/H gunk you/rival · W win · R end 480,528 12px origin 0.5,0.5 depth 0",
     "Text GAME 480,270 48px origin 0.5,0.5 depth 100",
     "Text [Match] 4,4 12px origin 0,0 depth 10000"
   ],
@@ -152,12 +156,12 @@
     "Container>Text TITLE 0,0 18px origin 0.5,0.5 depth 0",
     "Image ui_result_panel 480,270 400x300 origin 0.5,0.5 depth 0",
     "Text ENDLESS 480,188 18px origin 0.5,0.5 depth 0",
-    "Text LEVEL 1 480,254 16px origin 0.5,0.5 depth 0",
-    "Text LONGEST CHAIN 0 480,298 16px origin 0.5,0.5 depth 0",
-    "Text PAIRS 6 480,276 16px origin 0.5,0.5 depth 0",
+    "Text LEVEL 1 480,248 16px origin 0.5,0.5 depth 0",
+    "Text LONGEST CHAIN 0 480,288 16px origin 0.5,0.5 depth 0",
+    "Text PAIRS 6 480,268 16px origin 0.5,0.5 depth 0",
     "Text RESULT 480,150 36px origin 0.5,0.5 depth 0",
     "Text SCORE 0 480,222 28px origin 0.5,0.5 depth 0",
-    "Text TIME 0:03 480,320 16px origin 0.5,0.5 depth 0",
+    "Text TIME 0:03 480,308 16px origin 0.5,0.5 depth 0",
     "Text [Result] 4,4 12px origin 0,0 depth 10000"
   ]
 }

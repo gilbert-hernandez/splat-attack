@@ -1,9 +1,11 @@
-// A simple greedy player, only for generating stored replays. It isn't a rival bot.
-import { RULES } from '../src/config/rules.js';
-import { INPUT } from '../src/core/engine.js';
-import { COLUMNS, EMPTY, ROWS, applyGravity, cellAt, setCell } from '../src/core/grid.js';
-import { DOWN, LEFT, RIGHT, UP, otherCell } from '../src/core/pair.js';
-import { findGroups, splatPoints } from '../src/core/splat.js';
+// The sparring rival: a one-ply greedy player that stands in for the CPU rivals until SA-10. It
+// reads only the board it plays, keeps its own small state outside the match, and gives the same
+// per-tick inputs as a player. Unpaced, it also generates stored replays.
+import { RULES } from '../config/rules.js';
+import { INPUT } from '../core/engine.js';
+import { COLUMNS, EMPTY, ROWS, applyGravity, cellAt, isColor, setCell } from '../core/grid.js';
+import { DOWN, LEFT, RIGHT, UP, otherCell } from '../core/pair.js';
+import { findGroups, splatPoints } from '../core/splat.js';
 
 /** The best { col, orientation } for the state's falling pair. */
 export function planPair(state) {
@@ -48,7 +50,7 @@ function evaluate(state, col, orientation) {
   return points + shape(grid);
 }
 
-/** Rewards neighbors of one color, and keeps the board low, mostly in the spawn column. */
+/** Rewards neighbors of one color, and keeps the board low, mostly in the spawn column. Gunk counts as height only. */
 function shape(grid) {
   let value = 0;
   for (let col = 0; col < COLUMNS; col++) {
@@ -57,9 +59,54 @@ function shape(grid) {
       if (color === EMPTY) continue;
       const height = ROWS - row;
       value -= height * (col === COLUMNS >> 1 ? 3 : 1);
+      if (!isColor(color)) continue;
       if (col + 1 < COLUMNS && cellAt(grid, col + 1, row) === color) value += 20;
       if (row + 1 < ROWS && cellAt(grid, col, row + 1) === color) value += 20;
     }
   }
   return value;
+}
+
+/**
+ * @typedef {object} Sparring
+ * @property {{actEvery: number, dropDelay: number}} pace
+ * @property {{col: number, orientation: number, value: number} | null} plan
+ * @property {number} pairs the board's pair count when the plan was made
+ * @property {number} cooldown ticks until the next move or rotation
+ * @property {number} waited ticks spent in place before dropping
+ */
+
+/**
+ * A sparring rival's own state. Keep one per board, next to the match.
+ * @param {{actEvery: number, dropDelay: number}} [pace]
+ * @returns {Sparring}
+ */
+export function createSparring(pace = RULES.sparring) {
+  return { pace, plan: null, pairs: -1, cooldown: 0, waited: 0 };
+}
+
+/**
+ * This tick's input for a board. Call it once per tick, before the board steps.
+ * @param {Sparring} bot
+ * @param {import('../core/engine.js').State} board
+ */
+export function sparringInput(bot, board) {
+  if (board.phase !== 'falling' || !board.pair) return 0;
+  if (bot.pairs !== board.pairs) {
+    Object.assign(bot, { plan: planPair(board), pairs: board.pairs, cooldown: 0, waited: 0 });
+  }
+  const input = greedyInput(board, bot.plan);
+  if (input === INPUT.SOFT_DROP) {
+    if (bot.waited < bot.pace.dropDelay) {
+      bot.waited++;
+      return 0;
+    }
+    return input;
+  }
+  if (bot.cooldown > 0) {
+    bot.cooldown--;
+    return 0;
+  }
+  bot.cooldown = bot.pace.actEvery - 1;
+  return input;
 }

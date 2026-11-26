@@ -113,6 +113,35 @@ for (const mode of ['endless', 'ladder']) {
   });
 }
 
+test('a won Ladder result shows WIN, the score and the gunk sent', async ({ page }) => {
+  await openGame(page);
+  await startStopped(page, 'ladder');
+  await setState(page, { score: 4321, pairs: 23, tick: 60 * 83 });
+  await page.evaluate(async () => {
+    const url = '/src/core/versus.js';
+    const { forceTopOut } = await import(/* @vite-ignore */ url);
+    const match = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+    forceTopOut(match.runner.match, 1);
+    match.stats.longestChain = 5;
+    match.stats.gunkSent = 9;
+    match.finish();
+  });
+  await waitForScene(page, 'Result');
+  await waitFrames(page);
+  const texts = await page.evaluate(() => {
+    const result = /** @type {any} */ (window.__GAME__.scene.getScene('Result'));
+    return {
+      heading: result.children.list.find((c) => c.text === 'WIN')?.text,
+      rows: result.statTexts.map((t) => t.text),
+    };
+  });
+  expect(await read(page, 'Result', 'scoreText.text')).toBe('SCORE 4321');
+  expect(texts).toEqual({
+    heading: 'WIN',
+    rows: ['LEVEL 3', 'PAIRS 23', 'LONGEST CHAIN 5', 'TIME 1:23', 'GUNK SENT 9'],
+  });
+});
+
 test('pausing holds the result back, and Quit then skips it', async ({ page }) => {
   await openGame(page);
   await startStopped(page, 'endless');

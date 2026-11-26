@@ -1,5 +1,5 @@
 import { RULES } from '../config/rules.js';
-import { COLUMNS, EMPTY, ROWS, cellAt } from './grid.js';
+import { COLUMNS, ROWS, cellAt, isColor } from './grid.js';
 
 // Matching and scoring.
 
@@ -12,7 +12,7 @@ import { COLUMNS, EMPTY, ROWS, cellAt } from './grid.js';
 
 /**
  * Every group big enough to splat, in scan order (left to right, top to bottom). Hidden rows are
- * skipped: players can't see those blobs, so they don't match or connect a group.
+ * skipped: players can't see those blobs, so they don't match or connect a group. Gunk never matches.
  * @param {number[]} grid
  * @returns {Group[]}
  */
@@ -22,7 +22,7 @@ export function findGroups(grid) {
   for (let row = RULES.hiddenRows; row < ROWS; row++) {
     for (let col = 0; col < COLUMNS; col++) {
       const color = cellAt(grid, col, row);
-      if (color === EMPTY || seen[row * COLUMNS + col]) continue;
+      if (!isColor(color) || seen[row * COLUMNS + col]) continue;
       const cells = flood(grid, col, row, seen);
       if (cells.length >= RULES.groupSize) groups.push({ color, cells });
     }
@@ -67,4 +67,16 @@ export function splatPoints(groups, chain) {
   const color = 100 + colorPercent * (colors - 1);
   const multiplier = chainPercent * chain + chainGrowth * chain * (chain - 1);
   return Math.floor((base * color * multiplier) / 10000);
+}
+
+/**
+ * Attack power for one chain step.
+ * @param {Group[]} groups
+ * @param {number} chain the step's number, from 1
+ */
+export function splatPower(groups, chain) {
+  const { blobPower, stainPower, chainPercent, chainGrowth } = RULES.attack;
+  let base = 0;
+  for (const { cells, matched = [] } of groups) base += blobPower * cells.length + stainPower * matched.length;
+  return Math.floor((base * (chainPercent * chain + chainGrowth * chain * (chain - 1))) / 100);
 }

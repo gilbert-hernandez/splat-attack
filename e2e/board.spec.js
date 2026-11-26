@@ -180,16 +180,28 @@ test('a finished match stays on screen until the result, and Quit and a new matc
   expect(problems).toEqual([]);
 });
 
-test('Ladder has a live player board and an empty rival board', async ({ page }) => {
+test('Ladder has a live player board and a live rival board, without its next pairs', async ({ page }) => {
   await openGame(page);
   await startStopped(page, 'ladder');
   await advance(page, 10);
   expect((await drawn(page, 'pair'))[0].x).toBe(LEFT.ladder + 3 * CELL);
+  // The rival's pair is drawn on its own board, and its next pairs nowhere.
+  await advance(page, 600, 0);
   const rival = await page.evaluate(() => {
-    const { rivalView } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
-    return [rivalView.x, ...Object.values(rivalView.pools).map((pool) => /** @type {any} */ (pool).sprites.length)];
+    const { rivalView, runner } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+    rivalView.draw();
+    const count = (name) => rivalView.pools[name].active().length;
+    return {
+      x: rivalView.x,
+      pairs: runner.rival.pairs,
+      blobs: count('blobs'),
+      pair: count('pair'),
+      next: count('next'),
+    };
   });
-  expect(rival).toEqual([672, 0, 0, 0, 0, 0, 0]);
+  expect(rival).toMatchObject({ x: 672, next: 0 });
+  expect(rival.pairs).toBeGreaterThan(2);
+  expect(rival.blobs + rival.pair).toBeGreaterThan(0);
 });
 
 test('each match has its own seed', async ({ page }) => {
@@ -208,31 +220,50 @@ test('each match has its own seed', async ({ page }) => {
   expect(seeds.size).toBe(3);
 });
 
-// The view can't change the rules: the same results as without it, checked as in Node.
+// The view can't change the rules: the same results as without it, checked as in Node. A versus
+// replay plays in Ladder, its rival's inputs taken from the replay.
 const DIR = new URL('../tests/core/replays/', import.meta.url);
+const NAMES = [...COLOR, 'whole', 'cracked'];
 for (const file of readdirSync(DIR)) {
   const { replay, expected } = JSON.parse(readFileSync(new URL(file, DIR), 'utf8'));
+  const versus = replay.format === 2;
   test(`plays ${file} through the view`, async ({ page }) => {
     await openGame(page);
-    await startStopped(page, 'endless', replay.seed);
-    const actual = await page.evaluate(async (inputs) => {
-      const url = '/src/core/replay.js';
-      const { hashState } = await import(/* @vite-ignore */ url);
-      const match = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
-      const { runner, view } = match;
-      const checkpoints = [];
-      let longestChain = 0;
-      const { onTick } = runner;
-      runner.onTick = (state, events) => {
-        onTick(state, events);
-        view.draw();
-        for (const event of events) if (event.type === 'splat') longestChain = Math.max(longestChain, event.chain);
-        if (state.tick % 600 === 0) checkpoints.push(hashState(state));
-      };
-      for (const [mask, ticks] of inputs) runner.advance(ticks, mask);
-      const { tick, phase, chain, score } = runner.state;
-      return { ticks: tick, phase, chain, score, longestChain, hash: hashState(runner.state), checkpoints };
-    }, replay.inputs);
+    await startStopped(page, versus ? 'ladder' : 'endless', replay.seed);
+    const actual = await page.evaluate(
+      async ([inputs, isVersus]) => {
+        const url = '/src/core/replay.js';
+        const { hashState } = await import(/* @vite-ignore */ url);
+        const match = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+        const { runner, view, rivalView } = match;
+        const checkpoints = [];
+        let longestChain = 0;
+        const gunk = { cracks: 0, clears: 0 };
+        const { onTick } = runner;
+        runner.onTick = (state, events, rivalEvents) => {
+          onTick(state, events, rivalEvents);
+          view.draw();
+          rivalView?.draw();
+          for (const event of events) if (event.type === 'splat') longestChain = Math.max(longestChain, event.chain);
+          for (const event of [...events, ...(rivalEvents ?? [])]) {
+            if (event.type !== 'gunkHit') continue;
+            gunk.cracks += event.cracked.length;
+            gunk.clears += event.cleared.length;
+          }
+          const whole = runner.match ?? state;
+          if (whole.tick % 600 === 0) checkpoints.push(hashState(whole));
+        };
+        for (const [mask, ticks] of inputs) {
+          runner.readRivalInput = () => mask >> 5;
+          runner.advance(ticks, mask & 31);
+        }
+        const whole = runner.match ?? runner.state;
+        const { phase, chain, score } = runner.state;
+        const result = { ticks: whole.tick, phase, chain, score, longestChain, hash: hashState(whole), checkpoints };
+        return isVersus ? { ...result, outcome: runner.outcome, ...gunk } : result;
+      },
+      [replay.inputs, versus],
+    );
     expect(actual).toEqual(expected);
 
     // Let animations end, then compare the drawing with the grid. Mid-chain replays finish first.
@@ -240,15 +271,25 @@ for (const file of readdirSync(DIR)) {
       await advance(page, 12, 0);
     }
     await advance(page, 1, 0);
-    const { grid: cells, stains } = await matchState(page);
-    const visible = (layer) =>
-      layer
-        .map((color, i) => ({ color, col: i % 7, row: Math.floor(i / 7) }))
-        .filter(({ color, row }) => color && row >= 2)
-        .map(({ color, col, row }) => `${COLOR[color]} ${cellX(col)} ${cellY(row)}`);
-    const got = async (pool) => (await drawn(page, pool)).map((b) => `${b.key.split('_')[1]} ${b.x} ${b.y}`);
-    expect((await got('blobs')).sort()).toEqual(visible(cells).sort());
-    expect(stains.some(Boolean)).toBe(true);
-    expect((await got('stains')).sort()).toEqual(visible(stains).sort());
+    const boards = await page.evaluate(() => {
+      const { runner, rivalView } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+      rivalView?.draw();
+      return [runner.state, runner.rival].filter(Boolean).map(({ grid, stains }) => ({ grid, stains }));
+    });
+    const views = versus ? ['view', 'rivalView'] : ['view'];
+    for (const [i, name] of views.entries()) {
+      const { grid: cells, stains } = boards[i];
+      const left = versus ? [LEFT.ladder, 672][i] : LEFT.endless;
+      const visible = (layer) =>
+        layer
+          .map((color, n) => ({ color, col: n % 7, row: Math.floor(n / 7) }))
+          .filter(({ color, row }) => color && row >= 2)
+          .map(({ color, col, row }) => `${NAMES[color]} ${left + col * CELL} ${cellY(row)}`);
+      const got = async (pool) => (await drawn(page, pool, name)).map((b) => `${b.key.split('_')[1]} ${b.x} ${b.y}`);
+      expect((await got('blobs')).sort(), name).toEqual(visible(cells).sort());
+      expect((await got('stains')).sort(), name).toEqual(visible(stains).sort());
+    }
+    if (versus) expect(boards.some(({ grid: cells }) => cells.some((c) => c >= 6))).toBe(true);
+    expect(boards[0].stains.some(Boolean)).toBe(true);
   });
 }

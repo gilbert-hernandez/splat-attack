@@ -28,13 +28,19 @@ npm run coverage       # unit-test coverage; HTML report in coverage/index.html
 
 ### Engine
 
-`createState(seed)` starts a match and `step(state, input)` advances it one tick (60 per second) and returns that tick's events (lock, settle, splat, chain end, over) for rendering; `input` combines the `INPUT` bits. The same seed and inputs always give the same match. Lint fails if `src/core/` or `src/ai/` uses Phaser, randomness, the clock, browser globals or non-integer literals.
+`createState(seed)` starts a match and `step(state, input)` advances it one tick (60 per second) and returns that tick's events (lock, settle, splat, gunk hit, attack, gunk drop, chain end, over) for rendering; `input` combines the `INPUT` bits. The same seed and inputs always give the same match. Lint fails if `src/core/` or `src/ai/` uses Phaser, randomness, the clock, browser globals or non-integer literals.
 
 **The Wall:** each blob that splats stains its cell with its color (`state.stains`, shaped like the grid; gravity never moves it). A different color paints over a stain. A blob that splats on its own color's stain is a stain match: the stain stays and the step gains `scoring.stainPoints` per match before the color and chain bonuses (`src/config/rules.js`). Each group in a splat event lists its stain-match cells as `matched`.
 
-Engine tests draw boards as text with `tests/core/fixtures.js`: `.` is empty, letters are colors (`r y g b p`), and the falling pair shows in uppercase. Stain layers use the same letters, with `.` for a clean cell: `parseStains` and `renderStains`, or a third argument to `stateWith`.
+**Versus** (`src/core/versus.js`): `createVersus(seed)` makes two boards, player and rival, with the same pairs but their own gunk streams. `stepVersus(match, playerInput, rivalInput)` steps both, then delivers what each sent, so neither side moves first. A board that tops out loses; both on the same tick is a draw (`match.outcome`: `win`, `loss` or `draw`, from the player's side). Endless runs one board and never gets gunk.
 
-Replays (`src/core/replay.js`) store a match's seed and inputs. The ones in `tests/core/replays/` run in `npm test` and, through the browser tests, in Chromium; any change to the engine's state or results fails them. If the change is intended:
+**Attacks and gunk** (values in `RULES.attack`): each chain step adds attack power, `blobPower` per blob plus `stainPower` per stain match, times the same kind of chain curve as the score. When the chain ends, every `powerPerGunk` power is one gunk and the rest is dropped, so a single four sends nothing and chains of fours send 2, 4, 8 and 14 for 2 to 5 steps. The gunk first cancels the board's own `pending`; the rest goes to the other board. Pending gunk drops after the board's pair and chain finish, before its next pair: at most `maxDrop`, full rows first, then single gunk in different seeded columns, on top of each column. Gunk that doesn't fit is lost, and a drop that fills the spawn cell tops the board out. Gunk never matches. A splat cracks each whole gunk next to it and clears each cracked one, once per chain step, never in the hidden rows; cleared gunk leaves no stain.
+
+**The sparring rival** (`src/ai/sparring.js`) plays the Ladder rival until the CPU rivals arrive. It is a one-ply greedy player, paced by `RULES.sparring`: one move or rotation per `actEvery` ticks, then `dropDelay` ticks in place before it soft-drops. Unpaced, it also makes stored replays.
+
+Engine tests draw boards as text with `tests/core/fixtures.js`: `.` is empty, letters are colors (`r y g b p`), `#` is gunk and `+` cracked gunk, and the falling pair shows in uppercase. Stain layers use the same letters, with `.` for a clean cell: `parseStains` and `renderStains`, or a third argument to `stateWith`.
+
+Replays (`src/core/replay.js`) store a match's seed and inputs: format 1 for one board, format 2 for versus, where each mask holds the player's input in the low 5 bits and the rival's in the next 5 (`packInputs`). The ones in `tests/core/replays/` run in `npm test` and, through the browser tests, in Chromium; any change to the engine's state or results fails them. If the change is intended:
 
 ```bash
 npm run replays                  # replay the stored inputs and rewrite their expected results
@@ -55,7 +61,7 @@ The game is in touch mode or keyboard mode (`src/ui/inputMode.js`). It starts in
 
 `src/match/` turns keys, touches and frame time into engine ticks. `src/view/` draws the state and its events: the models are pure and work out what to draw, counting ticks rather than time, and `BoardView` places sprites. Lint stops `src/view/` from importing anything that changes a match, and stored replays must give the same hashes when played through it.
 
-The level rises every 10 pairs and speeds up falling (`src/core/level.js`, values in `src/config/rules.js`). A top-out shows GAME OVER, then the result: Enter or Space plays again, Esc returns to the title.
+The level rises every 10 pairs and speeds up falling (`src/core/level.js`, values in `src/config/rules.js`). In Endless a top-out shows GAME OVER; in Ladder either board topping out shows YOU WIN, YOU LOSE or DRAW, and the result adds WIN, LOSS or DRAW and the gunk the player sent (cancelled gunk included). Enter or Space plays again, Esc returns to the title. In Ladder each board shows its pending gunk as icons (`src/view/PendingView.js`): a full drop, a row and single gunk.
 
 ### Layouts
 
@@ -63,7 +69,7 @@ A window taller than it is wide gets a portrait game, 360 wide and 640 to 780 ta
 
 Every position is in `src/config/layout.js`, for both orientations. A scene makes its objects once and moves them in a callback passed to `onLayout(scene, place)`, which runs at once and after every change, also while the scene is paused. To add something, put its place in both orientations (`npm test` fails if one lacks it) and set it there.
 
-Space for pending gunk, the meter and touch controls is reserved in the portrait match's `areas`, and `match.buttons` holds the buttons' tap targets: below the board and top right in portrait, in the outer 120 px of each side in landscape. The layout depends on the mode too: in landscape touch mode, `touch` moves the Ladder boards inward. Unit tests check that nothing overlaps, and that every tap target is at least 48 CSS px on windows of 375×553 or 568×320.
+Space for pending gunk, the meter and touch controls is reserved in the portrait match's `areas`; `match.ladder.pendingPlayer` and `pendingRival` place each board's pending gunk (above each board in landscape; in the gunk area and under the rival board in portrait), and `match.buttons` holds the buttons' tap targets: below the board and top right in portrait, in the outer 120 px of each side in landscape. The layout depends on the mode too: in landscape touch mode, `touch` moves the Ladder boards inward. Unit tests check that nothing overlaps, and that every tap target is at least 48 CSS px on windows of 375×553 or 568×320.
 
 Text sizes are in the layout too (`size` on each text's place). Every player-facing text must be at least 12 CSS px on those two windows (`TEXT` in `src/config/layout.js`): 14 game px in portrait, and 21 in landscape touch mode, where `touch` raises them. Keyboard landscape keeps its sizes. A unit test and `e2e/text.spec.js` check it.
 
@@ -81,16 +87,18 @@ To play the dev build on a phone on the same Wi-Fi, run `npm run dev -- --host` 
 
 In a match, dev builds only (`src/debug/`, keys in `src/config/display.js`):
 
-| Key        | Does                                                                   |
-| ---------- | ---------------------------------------------------------------------- |
-| `1`–`5` ×2 | Sets the next pair: red, yellow, green, blue, purple; pivot first      |
-| `B`        | Loads the next prepared board: 6-step chain, top-out, stains, mid-game |
-| `P`        | Freezes or unfreezes the clock                                         |
-| `.`        | Freezes and steps one tick                                             |
-| `F`        | Fast-forward (8×) on or off                                            |
-| `R`        | Forces the end                                                         |
+| Key        | Does                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------- |
+| `1`–`5` ×2 | Sets the next pair: red, yellow, green, blue, purple; pivot first                                 |
+| `B`        | Loads the next prepared board on the player's side: 6-step chain, top-out, stains, gunk, mid-game |
+| `P`        | Freezes or unfreezes the clock                                                                    |
+| `.`        | Freezes and steps one tick                                                                        |
+| `F`        | Fast-forward (8×) on or off                                                                       |
+| `G` / `H`  | Sends a row of gunk to the player / the rival (`H` in Ladder only)                                |
+| `W`        | Wins a Ladder match: the rival's board tops out                                                   |
+| `R`        | Forces the end: the player's board tops out                                                       |
 
-For the 6-step chain, move the pair to the left wall and drop it. On the stains board, drop the pair in place: it scores two stain matches (100 points) and paints over a blue stain. Setting a pair, loading a board or forcing the end drops the match's replay.
+For the 6-step chain, move the pair to the left wall and drop it. On the stains board, drop the pair in place: it scores two stain matches (100 points) and paints over a blue stain. On the gunk board, drop the pair at the left wall: the splat cracks the `#` and clears the `+`. Setting a pair, loading a board, sending gunk or forcing an end drops the match's replay.
 
 ### Browser tests and videos
 
@@ -111,6 +119,7 @@ GitHub Actions runs check, build and e2e on every push and pull request; a faile
 src/main.js                Phaser.Game config (FIT, pixelArt, no physics)
 src/config/                tunables (rules.js: the ones that affect results)
 src/core/                  the rules engine: pure, deterministic, no Phaser
+src/ai/                    the sparring rival (pure, like the engine)
 src/match/                 tick runner, keyboard and touch input, stats
 src/ui/                    buttons, how they handle presses, and the input mode
 src/debug/                 debug keys and boards (dev builds)

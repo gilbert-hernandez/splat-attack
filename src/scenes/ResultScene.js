@@ -20,15 +20,16 @@ export default class ResultScene extends Phaser.Scene {
   }
 
   create() {
-    const { score, level, pairs, longestChain, ticks } = this.stats;
+    const { score, level, pairs, longestChain, ticks, gunkSent, outcome } = this.stats;
     const text = (size, value) =>
       this.add.text(0, 0, value, { fontFamily: FLOW.fontFamily, fontSize: `${size}px` }).setOrigin(0.5);
     const placeholders = this.registry.get('placeholders') ?? [];
     const panel = this.add.image(0, 0, 'ui_result_panel');
-    const heading = text(36, 'RESULT');
+    const heading = text(36, outcome ? FLOW.outcomes[outcome] : 'RESULT');
     const mode = text(18, FLOW.modes[this.mode]);
     this.scoreText = text(28, `SCORE ${score}`);
     const rows = [`LEVEL ${level}`, `PAIRS ${pairs}`, `LONGEST CHAIN ${longestChain}`, `TIME ${formatTime(ticks)}`];
+    if (outcome) rows.push(`GUNK SENT ${gunkSent}`);
     this.statTexts = rows.map((row) => text(16, row));
     // A finger still tapping from the match mustn't leave the result; a mouse click is deliberate.
     const options = { accept: (pointer) => this.ready || !pointer.wasTouch };

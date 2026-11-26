@@ -35,6 +35,10 @@ function rects(layout, mode) {
   for (const [name, r] of Object.entries(buttons)) out[`button ${name}`] = r;
   for (const [name, board] of Object.entries(boards)) {
     if (name === 'gameOver') continue;
+    if ('width' in board) {
+      out[name] = board;
+      continue;
+    }
     const { x, y, scale, next } = board;
     const b = BOARD.frameBorder * scale;
     const size = BOARD.cell * scale;
@@ -56,7 +60,7 @@ const apart = (r, o) => r.x + r.width <= o.x || o.x + o.width <= r.x || r.y + r.
 const BELOW = ['button ccw', 'button meter', 'button cw'];
 
 /** Fails unless every rectangle is on the screen and none overlap, but the bottom buttons in `touch`. */
-function expectApart(layout, mode) {
+function expectApart(layout, mode, buttons = true) {
   const all = rects(layout, mode);
   const { width, height } = layout.screen;
   for (const [name, r] of all) {
@@ -64,6 +68,9 @@ function expectApart(layout, mode) {
     for (const [other, o] of all) {
       if (other === name || (other === 'touch' && BELOW.includes(name)) || (name === 'touch' && BELOW.includes(other)))
         continue;
+      // The player's pending gunk sits in the area reserved for it.
+      if ([name, other].includes('gunk') && [name, other].includes('pendingPlayer')) continue;
+      if (!buttons && [name, other].some((n) => n.startsWith('button '))) continue;
       expect(apart(r, o), `${name} and ${other}`).toBe(true);
     }
   }
@@ -74,7 +81,8 @@ describe.each([640, 700, 780])('portrait match at height %i', (height) => {
   it.each(['ladder', 'endless'])('%s: nothing overlaps or leaves the screen', (mode) => {
     for (const input of ['keyboard', 'touch']) {
       const all = expectApart(portrait(height, input), mode);
-      expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 12 : 11);
+      expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 14 : 11);
+      if (mode === 'ladder') expect(inside(all.pendingPlayer, all.gunk)).toBe(true);
     }
   });
 
@@ -113,7 +121,26 @@ it('layouts never change the configuration', () => {
 describe('landscape match in touch mode', () => {
   it.each(['ladder', 'endless'])('%s: nothing overlaps or leaves the screen', (mode) => {
     const all = expectApart(landscape('touch'), mode);
-    expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 8 : 7);
+    expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 10 : 7);
+  });
+});
+
+describe('landscape pending gunk', () => {
+  it.each(['keyboard', 'touch'])('sits right above its own board in %s mode', (input) => {
+    // Keyboard mode hides the buttons, so they're left out there.
+    const all = expectApart(landscape(input), 'ladder', input === 'touch');
+    for (const [pending, board] of [
+      ['pendingPlayer', 'player'],
+      ['pendingRival', 'rival'],
+    ]) {
+      expect(all[pending].x).toBe(all[board].x + BOARD.frameBorder);
+      expect(all[pending].y + all[pending].height).toBeLessThanOrEqual(all[board].y);
+      expect(all[board].y - (all[pending].y + all[pending].height)).toBeLessThanOrEqual(8);
+    }
+    // Clear of the HUD's rows at the top center.
+    const { ui } = landscape(input);
+    expect(all.pendingPlayer.x + all.pendingPlayer.width).toBeLessThan(ui.score.x - 90);
+    expect(all.pendingRival.x).toBeGreaterThan(ui.score.x + 90);
   });
 });
 

@@ -132,6 +132,7 @@ describe('stain fixtures', () => {
   it.each([
     ['an unknown letter', '...x...', /unknown letter "x"/],
     ['a short row', '......', /7 cells/],
+    ['gunk', '...#...', /unknown letter "#"/],
   ])('reject %s', (_name, text, message) => {
     expect(() => parseStains(text)).toThrow(message);
   });

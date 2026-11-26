@@ -14,7 +14,16 @@ it('sums up a match with a long chain, keeping the longest', () => {
     input = 0;
   } while (state.phase !== 'falling');
   stats.add([{ type: 'splat', chain: 1, groups: [], points: 0 }]);
-  expect(stats.summary(state)).toEqual({ score: 3080, level: 1, pairs: 2, longestChain: 6, ticks: state.tick });
+  // 40 + 100 + 180 + 280 + 400 + 540 power is 22 gunk.
+  expect(stats.summary(state)).toEqual({
+    score: 3080,
+    level: 1,
+    pairs: 2,
+    longestChain: 6,
+    ticks: state.tick,
+    gunkSent: 22,
+    outcome: null,
+  });
 });
 
 it('is the same from a replay', () => {
@@ -33,4 +42,12 @@ it.each([
   [60 * 600, '10:00'],
 ])('formats %i ticks as %s', (ticks, text) => {
   expect(formatTime(ticks)).toBe(text);
+});
+
+it('counts cancelled gunk as sent and keeps a Ladder outcome', () => {
+  const stats = new MatchStats();
+  stats.add([{ type: 'attack', gunk: 5, cancelled: 3, sent: 2, pending: 0 }]);
+  stats.add([{ type: 'attack', gunk: 1, cancelled: 0, sent: 1, pending: 0 }]);
+  const state = stateWith('.......');
+  expect(stats.summary(state, 'win')).toMatchObject({ gunkSent: 6, outcome: 'win' });
 });

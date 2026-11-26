@@ -1,24 +1,38 @@
 import { CLOCK } from '../config/input.js';
 import { createState, step } from '../core/engine.js';
-import { createReplay, recordInput } from '../core/replay.js';
+import { createReplay, isOver, packInputs, recordInput } from '../core/replay.js';
+import { createVersus, stepVersus } from '../core/versus.js';
 
 // Absorbs rounding when frame times are added up.
 const EPSILON = 1e-6;
 
-/** Owns a match: turns frame time into engine ticks, and records the inputs. */
+/**
+ * Owns a match: turns frame time into engine ticks, and records the inputs. A solo match has one
+ * board; a versus match also has the rival's, whose input comes from `readRivalInput`.
+ */
 export default class MatchRunner {
   /**
    * @param {object} options
    * @param {number} options.seed
-   * @param {() => number} options.readInput the next tick's mask
-   * @param {(state: import('../core/engine.js').State, events: import('../core/engine.js').Event[]) => void} [options.onTick]
-   *   called after every tick, also once the match is over, so animations can finish
+   * @param {() => number} options.readInput the player's next tick mask
+   * @param {(board: import('../core/engine.js').State) => number} [options.readRivalInput] makes it a
+   *   versus match: the rival's next tick mask, from the rival's board
+   * @param {(state: import('../core/engine.js').State, events: import('../core/engine.js').Event[],
+   *   rivalEvents: import('../core/engine.js').Event[] | null) => void} [options.onTick]
+   *   called after every tick with the player's board and events (and the rival's events in versus),
+   *   also once the match is over, so animations can finish
    */
-  constructor({ seed, readInput, onTick = () => {} }) {
-    this.state = createState(seed);
+  constructor({ seed, readInput, readRivalInput, onTick = () => {} }) {
+    /** The versus match, or null when solo. */
+    this.match = readRivalInput ? createVersus(seed) : null;
+    /** The player's board. */
+    this.state = this.match ? this.match.boards[0] : createState(seed);
+    /** The rival's board, or null when solo. */
+    this.rival = this.match ? this.match.boards[1] : null;
     /** Null once the state was edited: such a match can't be replayed. */
-    this.replay = createReplay(seed);
+    this.replay = createReplay(seed, this.match !== null);
     this.readInput = readInput;
+    this.readRivalInput = readRivalInput;
     this.onTick = onTick;
     /** When true, only advance() ticks. */
     this.manual = false;
@@ -28,6 +42,16 @@ export default class MatchRunner {
     this.rate = 1;
     /** Ticks owed. */
     this.owed = 0;
+  }
+
+  /** True once the match has ended. */
+  get over() {
+    return isOver(this.match ?? this.state);
+  }
+
+  /** @returns {import('../core/versus.js').Outcome} the versus outcome; always null when solo */
+  get outcome() {
+    return this.match ? this.match.outcome : null;
   }
 
   /** @param {number} deltaMs frame time */
@@ -43,13 +67,20 @@ export default class MatchRunner {
   /**
    * Runs ticks at once.
    * @param {number} ticks
-   * @param {number} [mask] input for every tick, instead of reading it
+   * @param {number} [mask] the player's input for every tick, instead of reading it
    */
   advance(ticks, mask) {
     for (let i = 0; i < ticks; i++) {
       const input = mask ?? this.readInput();
-      if (this.replay) recordInput(this.replay, this.state, input);
-      this.onTick(this.state, step(this.state, input));
+      if (!this.match) {
+        if (this.replay) recordInput(this.replay, this.state, input);
+        this.onTick(this.state, step(this.state, input), null);
+        continue;
+      }
+      const rivalInput = this.over ? 0 : this.readRivalInput(this.rival);
+      if (this.replay) recordInput(this.replay, this.match, packInputs(input, rivalInput));
+      const [events, rivalEvents] = stepVersus(this.match, input, rivalInput);
+      this.onTick(this.state, events, rivalEvents);
     }
   }
 

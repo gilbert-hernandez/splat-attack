@@ -17,6 +17,10 @@ export const FLOW = {
     touch: 'Drag to move · Tap to rotate · Drag down to drop · Buttons rotate and pause',
   },
   modes: { ladder: 'LADDER', endless: 'ENDLESS' },
+  // Shown over the player's board when a match ends: Endless always tops out, Ladder by outcome.
+  endMessages: { over: 'GAME\nOVER', win: 'YOU\nWIN', loss: 'YOU\nLOSE', draw: 'DRAW' },
+  // The Ladder result's heading by outcome.
+  outcomes: { win: 'WIN', loss: 'LOSS', draw: 'DRAW' },
   // Match buttons: the symbol shown while an icon's art is missing, and tints for the placeholder button.
   touchSymbols: { cw: '↻', ccw: '↺', pause: 'II', meter: '★' },
   touchTints: { normal: 0x4c4670, pressed: 0x7d6fc4 },

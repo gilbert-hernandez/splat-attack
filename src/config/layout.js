@@ -36,7 +36,7 @@ export const LAYOUT = {
       heading: { x: 480, y: 150, size: 36 },
       mode: { x: 480, y: 188, size: 18 },
       score: { x: 480, y: 222, size: 28 },
-      stats: { x: 480, y: 254, spacing: 22, size: 16 },
+      stats: { x: 480, y: 248, spacing: 20, size: 16 },
       again: { x: 390, y: 372, size: 18 },
       title: { x: 570, y: 372, size: 18 },
     },
@@ -45,6 +45,9 @@ export const LAYOUT = {
         player: { x: 64, y: 100, scale: 1, next: { x: 304, y: 100, spacing: 104 } },
         rival: { x: 672, y: 100, scale: 1 },
         gameOver: { x: 176, y: 270 },
+        // Pending gunk icons, in a strip above each board's frame.
+        pendingPlayer: { x: 64, y: 64, width: 224, height: 24 },
+        pendingRival: { x: 672, y: 64, width: 224, height: 24 },
       },
       endless: {
         player: { x: 368, y: 100, scale: 1, next: { x: 608, y: 100, spacing: 104 } },
@@ -72,9 +75,9 @@ export const LAYOUT = {
       pause: { resume: { size: 21 }, quit: { size: 21 } },
       result: {
         mode: { size: 21 },
-        stats: { spacing: 26, size: 21 },
-        again: { y: 384, size: 21 },
-        title: { y: 384, size: 21 },
+        stats: { y: 244, spacing: 24, size: 21 },
+        again: { y: 390, size: 21 },
+        title: { y: 390, size: 21 },
       },
       ui: {
         mode: { size: 21 },
@@ -86,6 +89,8 @@ export const LAYOUT = {
           player: { x: 136, y: 100, scale: 1, next: { x: 376, y: 100, spacing: 104 } },
           rival: { x: 600, y: 100, scale: 1 },
           gameOver: { x: 248, y: 270 },
+          pendingPlayer: { x: 136, y: 64, width: 224, height: 24 },
+          pendingRival: { x: 600, y: 64, width: 224, height: 24 },
         },
       },
     },
@@ -122,7 +127,7 @@ export const LAYOUT = {
       heading: { x: 180, y: 160, size: 36 },
       mode: { x: 180, y: 200, size: 18 },
       score: { x: 180, y: 240, size: 28 },
-      stats: { x: 180, y: 284, spacing: 26, size: 16 },
+      stats: { x: 180, y: 276, spacing: 24, size: 16 },
       again: { x: 180, y: 420, size: 18 },
       title: { x: 180, y: 480, size: 18 },
     },
@@ -131,6 +136,9 @@ export const LAYOUT = {
         player: { x: 8, y: 92, scale: 1, next: { x: 268, y: 84, spacing: 100 } },
         rival: { x: 244, y: 288, scale: 0.5 },
         gameOver: { x: 120, y: 284 },
+        // The player's in the reserved gunk area; the rival's under its board, beside the meter.
+        pendingPlayer: { x: 8, y: 58, width: 344, height: 24 },
+        pendingRival: { x: 244, y: 488, width: 112, height: 24 },
       },
       endless: {
         player: { x: 32, y: 92, scale: 1, next: { x: 272, y: 84, spacing: 100 } },

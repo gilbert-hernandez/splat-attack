@@ -2,7 +2,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { firstDifference, replayResult } from '../../scripts/replayResult.js';
 import { createState, step } from '../../src/core/engine.js';
-import { createReplay, hashState, playReplay, recordInput } from '../../src/core/replay.js';
+import { createReplay, hashState, packInputs, playReplay, recordInput } from '../../src/core/replay.js';
+import { createVersus, stepVersus } from '../../src/core/versus.js';
 import { nextInt } from '../../src/core/rng.js';
 
 /** Records a match of random inputs to the end. */
@@ -54,7 +55,8 @@ describe('recording and playback', () => {
 
   it.each([
     [null, 'format: undefined'],
-    [{ format: 2, seed: 1, inputs: [] }, 'format: 2'],
+    [{ format: 3, seed: 1, inputs: [] }, 'format: 3'],
+    [{ format: 2, seed: 1, inputs: [[1024, 1]] }, 'invalid mask: 1024'],
     [{ format: 1, seed: -1, inputs: [] }, 'got -1'],
     [{ format: 1, seed: 1 }, 'must be a list'],
     [{ format: 1, seed: 1, inputs: [[0, 1], [32, 1]] }, 'input 1 has an invalid mask: 32'], // prettier-ignore
@@ -66,6 +68,58 @@ describe('recording and playback', () => {
     [{ format: 1, seed: 1, inputs: [null] }, 'input 0 must be'],
   ])('rejects %j', (replay, message) => {
     expect(() => playReplay(/** @type {any} */ (replay))).toThrow(message);
+  });
+});
+
+describe('versus replays', () => {
+  /** Records a versus match of random inputs on both sides to the end. */
+  function recordVersus(seed) {
+    const replay = createReplay(seed, true);
+    const match = createVersus(seed);
+    let rng = seed + 91;
+    while (match.outcome === null) {
+      const a = nextInt(rng, 32);
+      const b = nextInt(a.rng, 32);
+      rng = b.rng;
+      recordInput(replay, match, packInputs(a.value, b.value));
+      stepVersus(match, a.value, b.value);
+    }
+    return { replay, match };
+  }
+
+  it('gives the same match back after a JSON round trip', () => {
+    for (let seed = 0; seed < 5; seed++) {
+      const { replay, match } = recordVersus(seed);
+      expect(replay.format).toBe(2);
+      const played = playReplay(JSON.parse(JSON.stringify(replay)));
+      expect(played).toEqual(match);
+      expect(played.outcome).toBe(match.outcome);
+      expect(hashState(played)).toBe(hashState(match));
+    }
+  });
+
+  it('packs the player low and the rival high', () => {
+    expect(packInputs(16, 0)).toBe(16);
+    expect(packInputs(0, 16)).toBe(512);
+    expect(packInputs(31, 31)).toBe(1023);
+  });
+
+  it("passes both sides' events to onTick", () => {
+    const { replay } = recordVersus(1);
+    let ticks = 0;
+    playReplay(replay, (match, events) => {
+      ticks++;
+      expect(events).toHaveLength(2);
+      expect(match.boards).toHaveLength(2);
+    });
+    expect(ticks).toBeGreaterThan(0);
+  });
+
+  it('ignores ticks after the outcome', () => {
+    const { replay, match } = recordVersus(2);
+    const before = JSON.stringify(replay);
+    recordInput(replay, match, 1);
+    expect(JSON.stringify(replay)).toBe(before);
   });
 });
 
@@ -120,11 +174,17 @@ describe('stored replays', () => {
     expect(results.some((r) => r.phase === 'splatting' && r.chain >= 2), hint).toBe(true); // prettier-ignore
   });
 
+  it('cover a versus win with gunk cracked and cleared', () => {
+    const versus = stored.filter(({ replay }) => replay.format === 2).map((s) => s.expected);
+    const won = versus.some((r) => r.outcome === 'win' && r.cracks > 0 && r.clears > 0);
+    expect(won, 'run: npm run replays -- --generate').toBe(true);
+  });
+
   it('cover a stain match', () => {
     const matches = stored.map(({ replay }) => {
       let count = 0;
       playReplay(replay, (_state, events) => {
-        for (const e of events) if (e.type === 'splat') for (const g of e.groups) count += g.matched.length;
+        for (const e of events.flat()) if (e.type === 'splat') for (const g of e.groups) count += g.matched.length;
       });
       return count;
     });

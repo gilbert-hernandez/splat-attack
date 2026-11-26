@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { createSparring, sparringInput } from '../ai/sparring.js';
 import { CONTROLS, DEBUG, DISPLAY, FLOW } from '../config/index.js';
 import DebugKeys from '../debug/debugKeys.js';
 import { onLayout } from '../layout/manager.js';
@@ -8,10 +9,11 @@ import MatchRunner from '../match/runner.js';
 import MatchStats from '../match/stats.js';
 import TouchButton from '../ui/TouchButton.js';
 import BoardView from '../view/BoardView.js';
+import PendingView from '../view/PendingView.js';
 import { addSceneLabel } from './sceneLabel.js';
 
-// A match: the runner advances the engine, the view draws it. Ladder shows the player's board
-// beside the rival's (empty until SA-8), Endless the player's alone.
+// A match: the runner advances the engine, the view draws it. Ladder is a versus match against the
+// sparring rival (until the CPU rivals arrive), Endless the player's board alone.
 export default class MatchScene extends Phaser.Scene {
   constructor() {
     super('Match');
@@ -29,8 +31,9 @@ export default class MatchScene extends Phaser.Scene {
     const solo = this.mode === 'endless';
     this.view = new BoardView(this, { frameKey: 'board_frame_player', preview: true });
     this.rivalView = solo ? null : new BoardView(this, { frameKey: 'board_frame_rival' });
+    this.pending = solo ? null : [new PendingView(this), new PendingView(this)];
     this.gameOverText = this.add
-      .text(0, 0, 'GAME\nOVER', {
+      .text(0, 0, FLOW.endMessages.over, {
         fontFamily: FLOW.fontFamily,
         fontSize: '48px',
         fontStyle: 'bold',
@@ -70,6 +73,8 @@ export default class MatchScene extends Phaser.Scene {
     const { player, gameOver } = match[this.mode];
     this.view.place(player);
     this.rivalView?.place(match.ladder.rival);
+    this.pending?.[0].place(match.ladder.pendingPlayer);
+    this.pending?.[1].place(match.ladder.pendingRival);
     this.gameOverText.setPosition(gameOver.x, gameOver.y);
     for (const [name, button] of Object.entries(this.buttons)) {
       button.place(match.buttons[name]);
@@ -155,20 +160,25 @@ export default class MatchScene extends Phaser.Scene {
     this.stats = new MatchStats();
     this.overTicks = 0;
     this.gameOverText.setVisible(false);
+    const rival = this.rivalView ? createSparring() : null;
     this.runner = new MatchRunner({
       seed,
       readInput: () => this.keys.next() | this.touch.next(),
-      onTick: (state, events) => this.tick(state, events),
+      readRivalInput: rival ? (board) => sparringInput(rival, board) : undefined,
+      onTick: (state, events, rivalEvents) => this.tick(state, events, rivalEvents),
     });
     this.view.show(this.runner.state);
+    this.rivalView?.show(this.runner.rival);
+    this.showPending();
   }
 
-  tick(state, events) {
+  tick(state, events, rivalEvents) {
     this.view.tick(state, events);
+    if (rivalEvents) this.rivalView.tick(this.runner.rival, rivalEvents);
     this.stats.add(events);
     if (events.some(({ type }) => type === 'lock')) this.touch.lock();
-    if (state.phase !== 'over') return;
-    this.gameOverText.setVisible(true);
+    if (!this.runner.over) return;
+    this.gameOverText.setText(FLOW.endMessages[this.runner.outcome ?? 'over']).setVisible(true);
     // Counted in ticks, so pausing stops it.
     if (this.overTicks++ === FLOW.gameOverTicks) this.finish();
   }
@@ -178,6 +188,14 @@ export default class MatchScene extends Phaser.Scene {
     this.elapsedMs += delta;
     this.runner.update(delta);
     this.view.draw();
+    this.rivalView?.draw();
+    this.showPending();
+  }
+
+  showPending() {
+    if (!this.pending) return;
+    this.pending[0].show(this.runner.state.pending);
+    this.pending[1].show(this.runner.rival.pending);
   }
 
   openPause() {
@@ -199,6 +217,7 @@ export default class MatchScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.scene.stop('UI');
-    this.scene.start('Result', { mode: this.mode, stats: this.stats.summary(this.runner.state) });
+    const { state, outcome } = this.runner;
+    this.scene.start('Result', { mode: this.mode, stats: this.stats.summary(state, outcome) });
   }
 }

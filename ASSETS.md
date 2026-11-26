@@ -57,9 +57,9 @@ Sizes are per frame (W×H).
 
 | Ticket | File                  | Size  | Frames | Notes                                                                       |
 | ------ | --------------------- | ----- | ------ | --------------------------------------------------------------------------- |
-| SA-20  | `sa_gunk_whole.png`   | 32×32 | 1      | Dried paint; clearly not a blob                                             |
-| SA-20  | `sa_gunk_cracked.png` | 32×32 | 1      | One hit from breaking                                                       |
-| SA-20  | `sa_gunk_break.png`   | 32×32 | 5      | Crumbles away                                                               |
+| SA-20  | `sa_gunk_whole.png`   | 32×32 | 1      | Dried paint; clearly not a blob, also without hue; fills the whole cell     |
+| SA-20  | `sa_gunk_cracked.png` | 32×32 | 1      | One hit from breaking; must differ from whole gunk without hue              |
+| SA-20  | `sa_gunk_break.png`   | 32×32 | 5      | Crumbles away while the splat next to it plays                              |
 | SA-20  | `sa_stain_red.png`    | 32×32 | 1      | Low contrast, blobs stay readable on top; keep a cue that works without hue |
 | SA-20  | `sa_stain_yellow.png` | 32×32 | 1      | Low contrast, blobs stay readable on top; keep a cue that works without hue |
 | SA-20  | `sa_stain_green.png`  | 32×32 | 1      | Low contrast, blobs stay readable on top; keep a cue that works without hue |
@@ -131,9 +131,9 @@ Sizes are per frame (W×H).
 | SA-24  | `sa_ui_meter_fill.png`  | 196×12  | 1      | Sits 2 px inside the frame; stretched horizontally |
 | SA-24  | `sa_ui_score_panel.png` | 200×64  | 1      | Holds the main number on screen                    |
 | SA-24  | `sa_ui_next_box.png`    | 64×96   | 1      | Next pair                                          |
-| SA-24  | `sa_ui_gunk_small.png`  | 24×24   | 1      | Pending gunk                                       |
-| SA-24  | `sa_ui_gunk_medium.png` | 24×24   | 1      | Pending gunk                                       |
-| SA-24  | `sa_ui_gunk_large.png`  | 24×24   | 1      | Pending gunk                                       |
+| SA-24  | `sa_ui_gunk_small.png`  | 24×24   | 1      | Pending gunk: one                                  |
+| SA-24  | `sa_ui_gunk_medium.png` | 24×24   | 1      | Pending gunk: a row (7)                            |
+| SA-24  | `sa_ui_gunk_large.png`  | 24×24   | 1      | Pending gunk: a full drop (28)                     |
 | SA-24  | `sa_ui_icon_rinse.png`  | 32×32   | 1      | Meter choice                                       |
 | SA-24  | `sa_ui_icon_bomb.png`   | 32×32   | 1      | Meter choice                                       |
 | SA-24  | `sa_ui_button.png`      | 160×48  | 3      | Normal, hover, pressed (sheet is 480×48)           |

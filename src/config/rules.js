@@ -33,4 +33,24 @@ export const RULES = {
     // Per blob that splats on a stain of its own color, added before the color and chain bonuses.
     stainPoints: 10,
   },
+  // Gunk sent to the other board in versus. Each chain step adds power; when the chain ends, every
+  // powerPerGunk becomes one gunk and the rest is dropped. Gunk cancels the board's own pending gunk
+  // first.
+  attack: {
+    blobPower: 10,
+    // Per blob that splats on its own stain, on top of blobPower.
+    stainPower: 10,
+    // Chain step k multiplies by chainPercent * k + chainGrowth * k * (k - 1) percent.
+    chainPercent: 100,
+    chainGrowth: 25,
+    powerPerGunk: 70,
+    // The most gunk one drop puts on a board; the rest waits for the next drop.
+    maxDrop: 28,
+  },
+  // The sparring rival (src/ai/sparring.js) until the CPU rivals arrive: at most one move or rotation
+  // per actEvery ticks, then dropDelay ticks in place before it soft-drops.
+  sparring: {
+    actEvery: 6,
+    dropDelay: 30,
+  },
 };

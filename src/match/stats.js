@@ -8,27 +8,33 @@ import { levelAt } from '../core/level.js';
  * @property {number} pairs
  * @property {number} longestChain
  * @property {number} ticks
+ * @property {number} gunkSent all gunk the player's attacks made, cancelled gunk included
+ * @property {import('../core/versus.js').Outcome} outcome null when solo
  */
 
 /** Follows a match's events for what the state doesn't keep. */
 export default class MatchStats {
   constructor() {
     this.longestChain = 0;
+    this.gunkSent = 0;
   }
 
   /** @param {import('../core/engine.js').Event[]} events one tick's events */
   add(events) {
     for (const event of events) {
       if (event.type === 'splat') this.longestChain = Math.max(this.longestChain, event.chain);
+      if (event.type === 'attack') this.gunkSent += event.gunk;
     }
   }
 
   /**
-   * @param {import('../core/engine.js').State} state
+   * @param {import('../core/engine.js').State} state the player's board
+   * @param {import('../core/versus.js').Outcome} [outcome]
    * @returns {Stats}
    */
-  summary({ score, pairs, tick }) {
-    return { score, level: levelAt(pairs), pairs, longestChain: this.longestChain, ticks: tick };
+  summary({ score, pairs, tick }, outcome = null) {
+    const { longestChain, gunkSent } = this;
+    return { score, level: levelAt(pairs), pairs, longestChain, ticks: tick, gunkSent, outcome };
   }
 }
 

@@ -1,11 +1,23 @@
 import { RULES } from '../config/rules.js';
 
-// The board: a flat array, row 0 is the top hidden row. Cells are 0 (empty) or a color, 1 to
-// RULES.colors, in the manifest's color order.
+// The board: a flat array, row 0 is the top hidden row. Cells are 0 (empty), a color (1 to
+// RULES.colors, in the manifest's color order), or gunk: whole, or cracked by one hit.
 
 export const COLUMNS = RULES.columns;
 export const ROWS = RULES.hiddenRows + RULES.visibleRows;
 export const EMPTY = 0;
+export const GUNK = RULES.colors + 1;
+export const CRACKED = RULES.colors + 2;
+
+/** True for a blob's color, false for empty cells and gunk. */
+export function isColor(value) {
+  return value > EMPTY && value <= RULES.colors;
+}
+
+/** True for whole or cracked gunk. */
+export function isGunk(value) {
+  return value === GUNK || value === CRACKED;
+}
 
 /** @returns {number[]} */
 export function createGrid() {

@@ -2,10 +2,12 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { RULES } from '../../src/config/rules.js';
 import { INPUT, createState, step } from '../../src/core/engine.js';
-import { COLUMNS, EMPTY, createGrid } from '../../src/core/grid.js';
-import { createReplay, playReplay, recordInput } from '../../src/core/replay.js';
+import { COLUMNS, CRACKED, EMPTY, GUNK, createGrid } from '../../src/core/grid.js';
+import { createReplay, packInputs, playReplay, recordInput } from '../../src/core/replay.js';
+import { createVersus, stepVersus } from '../../src/core/versus.js';
 import { nextInt, seedRng } from '../../src/core/rng.js';
 import BoardModel from '../../src/view/boardModel.js';
+import { createSparring, sparringInput } from '../../src/ai/sparring.js';
 import { stateWith } from '../core/fixtures.js';
 
 function deepFreeze(value) {
@@ -32,33 +34,41 @@ function drawnStains(model) {
   return stains;
 }
 
-/** Runs a replay through a model on frozen states, checking it at every quiet tick. */
+/** Runs a replay through a model per board on frozen states, checking them at every quiet tick. */
 function check(replay) {
-  const model = new BoardModel(snapshot(createState(replay.seed)));
-  let quiet = 0;
+  const versus = replay.format === 2;
+  const first = versus ? createVersus(replay.seed).boards : [createState(replay.seed)];
+  const boards = first.map((state) => ({ model: new BoardModel(snapshot(state)), quiet: 0 }));
   let longest = 0;
   let count = 0;
-  playReplay(replay, (state, events) => {
-    model.tick(snapshot(state), snapshot(events));
-    for (const event of events) if (event.type === 'splat') longest = Math.max(longest, event.chain);
-    // As one settle or splat ends, nothing may still be moving.
-    const moved = [...model.blobs.values()].some((b) => model.isFalling(b) && b.fall.start < model.ticks);
-    if (events.length > 0) expect(moved).toBe(false);
-    if (events.some((e) => e.type === 'settle')) expect(model.splats).toEqual([]);
-    // Rendering every state must work, frozen.
-    model.drawBridges();
-    model.drawGhost();
-    model.drawPair();
-    // Stains change only on splat ticks, so they always equal the engine's.
-    expect(drawnStains(model)).toEqual(state.stains);
+  playReplay(replay, (match, events) => {
+    const states = versus ? match.boards : [match];
+    const lists = versus ? events : [events];
+    states.forEach((state, side) => checkTick(boards[side], state, lists[side]));
+    for (const event of lists[0]) if (event.type === 'splat') longest = Math.max(longest, event.chain);
     count++;
-    if (state.phase === 'falling' || state.phase === 'over') {
-      quiet++;
-      if (quiet % 7 === 1 || state.phase === 'over') expect(drawnGrid(model)).toEqual(state.grid);
-    }
   });
   expect(count).toBeGreaterThan(0);
-  return { quiet, longest };
+  return { quiet: Math.min(...boards.map((b) => b.quiet)), longest };
+}
+
+function checkTick(board, state, events) {
+  const { model } = board;
+  model.tick(snapshot(state), snapshot(events));
+  // As one settle or splat ends, nothing may still be moving.
+  const moved = [...model.blobs.values()].some((b) => model.isFalling(b) && b.fall.start < model.ticks);
+  if (events.length > 0) expect(moved).toBe(false);
+  if (events.some((e) => e.type === 'settle')) expect([model.splats, model.breaks]).toEqual([[], []]);
+  // Rendering every state must work, frozen.
+  model.drawBridges();
+  model.drawGhost();
+  model.drawPair();
+  // Stains change only on splat ticks, so they always equal the engine's.
+  expect(drawnStains(model)).toEqual(state.stains);
+  if (state.phase === 'falling' || state.phase === 'over') {
+    board.quiet++;
+    if (board.quiet % 7 === 1 || state.phase === 'over') expect(drawnGrid(model)).toEqual(state.grid);
+  }
 }
 
 function randomReplay(seed) {
@@ -75,6 +85,19 @@ function randomReplay(seed) {
   return replay;
 }
 
+/** A versus match between sparring players of different paces, so gunk flies both ways. */
+function sparringReplay(seed) {
+  const match = createVersus(seed);
+  const replay = createReplay(seed, true);
+  const bots = [createSparring({ actEvery: 2, dropDelay: 4 }), createSparring()];
+  while (match.outcome === null) {
+    const inputs = bots.map((bot, side) => sparringInput(bot, match.boards[side]));
+    recordInput(replay, match, packInputs(...inputs));
+    stepVersus(match, ...inputs);
+  }
+  return replay;
+}
+
 describe('board model', () => {
   const DIR = new URL('../core/replays/', import.meta.url);
   it.each(readdirSync(DIR))('matches the grid through %s', { timeout: 60000 }, (file) => {
@@ -85,6 +108,58 @@ describe('board model', () => {
 
   it('matches the grid through random matches', { timeout: 60000 }, () => {
     for (let seed = 1; seed <= 10; seed++) check(randomReplay(seed));
+  });
+
+  it('matches both grids, gunk included, through sparring matches', { timeout: 60000 }, () => {
+    let gunk = 0;
+    for (let seed = 1; seed <= 3; seed++) {
+      const replay = sparringReplay(seed);
+      check(replay);
+      playReplay(replay, (_match, events) => {
+        for (const e of events.flat()) if (e.type === 'drop' || e.type === 'gunkHit') gunk++;
+      });
+    }
+    expect(gunk).toBeGreaterThan(0);
+  });
+
+  it('drops gunk in from above the top edge', () => {
+    const state = stateWith('.......');
+    state.pair = null;
+    state.phase = 'settling';
+    state.wait = 1;
+    state.pending = 7;
+    const model = new BoardModel(state);
+    model.tick(state, step(state));
+    const gunk = model.drawBlobs().filter((b) => b.color === GUNK);
+    expect(gunk).toHaveLength(7);
+    for (const b of gunk) expect(b).toMatchObject({ key: 'gunk_whole', y: RULES.hiddenRows - 1 });
+    // Lands within the settle time.
+    for (let i = 0; i < RULES.settleTicks; i++) model.tick(state, step(state));
+    for (const b of model.drawBlobs().filter((d) => d.color === GUNK)) expect(b.y).toBe(13);
+  });
+
+  it('cracks gunk on the hit tick and breaks cleared gunk before the next fall', () => {
+    const state = stateWith('...+...\n.rrr#..', { col: 0, row: 13 });
+    const model = new BoardModel(state);
+    model.tick(state, step(state, INPUT.SOFT_DROP));
+    while (state.phase === 'settling') model.tick(state, step(state));
+    // The splat tick: (4, 13) cracked, (3, 12) cleared and crumbling.
+    expect(model.drawBlobs().find((b) => b.x === 4 && b.y === 13)).toMatchObject({
+      color: CRACKED,
+      key: 'gunk_cracked',
+    });
+    expect(model.breaks).toEqual([{ col: 3, row: 12, start: model.ticks }]);
+    const frames = new Set();
+    while (state.phase === 'splatting') {
+      for (const b of model.drawBlobs()) if (b.anim === 'break') frames.add(b.frame);
+      model.tick(state, step(state));
+    }
+    expect(model.breaks).toEqual([]);
+    expect(frames.size).toBeGreaterThan(1);
+  });
+
+  it('never bridges gunk', () => {
+    expect(new BoardModel(stateWith('##.....\n##+....')).drawBridges()).toEqual([]);
   });
 
   it('animates a fall, then a landing, in the settle time', () => {

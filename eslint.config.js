@@ -37,7 +37,18 @@ const pureRules = {
 
 // Drawing can't change the rules: the view may import only what reads the state.
 const readOnly = 'The view only reads the match state.';
-const readers = ['COLUMNS', 'ROWS', 'EMPTY', 'cellAt', 'isGrounded', 'otherCell', 'landingCells'];
+const readers = [
+  'COLUMNS',
+  'ROWS',
+  'EMPTY',
+  'GUNK',
+  'CRACKED',
+  'isColor',
+  'cellAt',
+  'isGrounded',
+  'otherCell',
+  'landingCells',
+];
 const viewRules = {
   'no-restricted-imports': [
     'error',

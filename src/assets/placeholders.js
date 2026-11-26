@@ -51,6 +51,28 @@ export function shapeSpans(shape, size) {
   return spans;
 }
 
+// Gunk's placeholder: a full tile of dried paint with darker crust dots; cracked gunk adds a dark
+// zigzag crack from corner to corner.
+const CRUST_STEP = 6;
+const CRUST_SHADE = 0.45;
+const CRACK_SHADE = 0.8;
+
+function drawGunk(ctx, x, w, h, color, cracked) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, 0, w, h);
+  ctx.fillStyle = shade(color, CRUST_SHADE);
+  for (let y = 2; y + 2 <= h; y += CRUST_STEP) {
+    for (let dx = (y / CRUST_STEP) % 2 ? 5 : 2; dx + 2 <= w; dx += CRUST_STEP) ctx.fillRect(x + dx, y, 2, 2);
+  }
+  if (!cracked) return;
+  ctx.fillStyle = shade(color, CRACK_SHADE);
+  for (let y = 0; y < h; y++) {
+    // Zigzags across the diagonal, 3 px thick.
+    const dx = Math.min(w - 3, Math.max(0, y + (y % 8 < 4 ? 2 : -2)));
+    ctx.fillRect(x + dx, y, 3, 1);
+  }
+}
+
 /** Small marks, one more per frame, so animation is visible. */
 function drawTicks(ctx, x, y, w, color, ticks) {
   const size = Math.max(1, Math.floor(w / 12));
@@ -67,6 +89,10 @@ function drawFrame(ctx, x, entry, color, ticks) {
     ctx.fillRect(x, h - b, w, b);
     ctx.fillRect(x, b, b, h - 2 * b);
     ctx.fillRect(x + w - b, b, b, h - 2 * b);
+    return;
+  }
+  if (entry.shape === 'crust' || entry.shape === 'cracked') {
+    drawGunk(ctx, x, w, h, color, entry.shape === 'cracked');
     return;
   }
   if (entry.category === 'stain') {

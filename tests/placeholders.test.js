@@ -74,6 +74,30 @@ describe('placeholders', () => {
     }
   });
 
+  it('draws whole and cracked gunk differently from each other and from every blob, without hue', () => {
+    /** Pixels by shade: the grayscale picture, as "x,y=color" with the tile color left out. */
+    const picture = (key) => {
+      const { calls } = draw(asset(key));
+      const set = new Set();
+      for (const r of calls) {
+        // The first frame only.
+        for (let y = r.y; y < r.y + r.h; y++) {
+          for (let x = r.x; x < Math.min(32, r.x + r.w); x++) set.add(`${x},${y}=${r.color}`);
+        }
+      }
+      return set;
+    };
+    const differ = (a, b) => [...a].filter((p) => !b.has(p)).length + [...b].filter((p) => !a.has(p)).length;
+    const whole = picture('gunk_whole');
+    const cracked = picture('gunk_cracked');
+    expect(differ(whole, cracked)).toBeGreaterThan(60);
+    // Gunk fills its whole cell; blobs are shapes on a clear background.
+    const covered = (set) => new Set([...set].map((p) => p.split('=')[0])).size;
+    expect(covered(whole)).toBe(32 * 32);
+    expect(covered(cracked)).toBe(32 * 32);
+    for (const { name } of COLORS) expect(covered(picture(`blob_${name}_idle`)), name).toBeLessThan(32 * 32 - 100);
+  });
+
   it('draws a stain as a dim full tile, unlike its bright blob shape', () => {
     for (const { name, color } of COLORS) {
       const [tile, ...mark] = draw(asset(`stain_${name}`)).calls;

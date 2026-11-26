@@ -110,7 +110,7 @@ export function advance(page, ticks, mask = undefined) {
 export function advanceToEnd(page) {
   return page.evaluate(() => {
     const { runner, view } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
-    for (let i = 0; i < 5000 && runner.state.phase !== 'over'; i++) runner.advance(1, 16);
+    for (let i = 0; i < 5000 && !runner.over; i++) runner.advance(1, 16);
     runner.advance(40, 0);
     view.draw();
   });
@@ -132,18 +132,21 @@ export function setState(page, changes) {
   }, changes);
 }
 
-/** What a pool of the player's board shows: ghost, blobs, bridges, pair or next. */
-export function drawn(page, pool) {
-  return page.evaluate((name) => {
-    const { view } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
-    return view.pools[name].active().map((s) => ({
-      key: s.texture.key,
-      x: s.x,
-      y: s.y,
-      cut: s.isCropped ? s._crop.y : 0,
-      visible: s.visible,
-    }));
-  }, pool);
+/** What a pool of a board shows: ghost, blobs, bridges, pair or next; the player's unless told. */
+export function drawn(page, pool, board = 'view') {
+  return page.evaluate(
+    ([name, viewName]) => {
+      const view = /** @type {any} */ (window.__GAME__.scene.getScene('Match'))[viewName];
+      return view.pools[name].active().map((s) => ({
+        key: s.texture.key,
+        x: s.x,
+        y: s.y,
+        cut: s.isCropped ? s._crop.y : 0,
+        visible: s.visible,
+      }));
+    },
+    [pool, board],
+  );
 }
 
 /** Hold a key down until the match has seen it. */

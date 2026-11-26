@@ -89,7 +89,7 @@ export default class BoardView {
       pools.bridges.place(this.left(x), this.top(y), `blob_${name(color)}_bridge_${direction}`, 0, this.scale);
     }
     for (const half of model.drawPair()) this.placeBlob(pools.pair, half);
-    model.drawNext().forEach((pair, i) => this.placeNext(pair, i));
+    if (this.nextBoxes.length > 0) model.drawNext().forEach((pair, i) => this.placeNext(pair, i));
     for (const pool of Object.values(pools)) pool.end();
   }
 
@@ -101,14 +101,14 @@ export default class BoardView {
     return this.y + (row - RULES.hiddenRows) * BOARD.cell * this.scale;
   }
 
-  /** Draws a blob, cut off at the board's top edge. */
-  placeBlob(pool, { color, anim, frame, x, y }) {
+  /** Draws a blob or gunk, cut off at the board's top edge. */
+  placeBlob(pool, { key, frame, x, y }) {
     const { cell } = BOARD;
     const top = Math.round((y - RULES.hiddenRows) * cell);
     const cut = Math.max(0, -top);
     if (cut >= cell) return;
     const { scale } = this;
-    const sprite = pool.place(this.left(x), this.y + top * scale, `blob_${name(color)}_${anim}`, frame, scale);
+    const sprite = pool.place(this.left(x), this.y + top * scale, key, frame, scale);
     if (cut > 0) sprite.setCrop(0, cut, cell, cell - cut);
     else sprite.setCrop();
   }

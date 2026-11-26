@@ -43,7 +43,7 @@ The match SHALL advance 60 ticks per second of real time at any display rate. Af
 - **THEN** the match doesn't skip ahead by that time
 
 ### Requirement: Pausing releases keys
-While paused the match SHALL NOT advance. Pausing or losing window focus SHALL release every key and touch, and drop presses and gestures not yet used.
+While paused the match SHALL NOT advance. Pausing SHALL release every key and touch, and drop presses and gestures not yet used. Losing window focus or hiding the page SHALL pause the match.
 
 #### Scenario: Key released while paused
 - **WHEN** a move key is held, the match is paused, the key is released and the match resumes
@@ -52,6 +52,10 @@ While paused the match SHALL NOT advance. Pausing or losing window focus SHALL r
 #### Scenario: Press in the pause menu
 - **WHEN** a rotate key is pressed while paused
 - **THEN** the pair doesn't rotate on resume
+
+#### Scenario: Key held through a focus loss
+- **WHEN** a move key is held, the window loses focus, and the match is resumed
+- **THEN** the pair doesn't move by itself
 
 ### Requirement: New seed per match
 Each match SHALL start from a fresh seed, and its inputs SHALL be recorded as a replay.

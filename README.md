@@ -45,7 +45,11 @@ Review the diff: a changed `score` means scores moved.
 
 Controls: A/D or ←/→ move, S or ↓ soft drop, Q/Z and E/X rotate, Esc pauses. Keys, repeat and clock settings are in `src/config/input.js`; drawing settings are in `src/config/view.js`.
 
-On a touch screen, drag sideways to move, tap to rotate clockwise and drag down to soft drop. A drag keeps its axis until the finger lifts, and a lock ends a drop. Only the first finger counts. `src/match/gestures.js` turns touches into the same masks as keys, counting ticks rather than time; thresholds are in `src/config/touch.js`, mostly in CSS pixels.
+On a touch screen, drag sideways to move, tap to rotate clockwise and drag down to soft drop. A drag keeps its axis until the finger lifts, and a lock ends a drop. The first finger down outside the buttons owns the gesture. `src/match/gestures.js` turns touches into the same masks as keys, counting ticks rather than time; thresholds are in `src/config/touch.js`, mostly in CSS pixels.
+
+On-screen buttons rotate either way (on press, once) and pause (on release); the meter button's slot stays empty until SA-9. They work while another finger drags, and a finger that pressed one never makes a gesture. Every button, menus included, follows only the finger that pressed it and ignores cancelled touches (`src/ui/pressRule.js`); only the mouse hovers. The result ignores taps for as long as it ignores keys.
+
+The game is in touch mode or keyboard mode (`src/ui/inputMode.js`). It starts in touch mode where the main pointer is coarse. A touch switches to touch; a mouse press or a game key switches back, unless a finger is down. The match buttons show, and the title's hint changes, with the mode. The touch that shows the buttons can't press one.
 
 `src/match/` turns keys, touches and frame time into engine ticks. `src/view/` draws the state and its events: the models are pure and work out what to draw, counting ticks rather than time, and `BoardView` places sprites. Lint stops `src/view/` from importing anything that changes a match, and stored replays must give the same hashes when played through it.
 
@@ -57,7 +61,7 @@ A window taller than it is wide gets a portrait game, 360 wide and 640 to 780 ta
 
 Every position is in `src/config/layout.js`, for both orientations. A scene makes its objects once and moves them in a callback passed to `onLayout(scene, place)`, which runs at once and after every change, also while the scene is paused. To add something, put its place in both orientations (`npm test` fails if one lacks it) and set it there.
 
-Space for the pause button, pending gunk, meter and touch controls is reserved in the portrait match's `areas`. Unit tests check that nothing overlaps them.
+Space for pending gunk, the meter and touch controls is reserved in the portrait match's `areas`, and `match.buttons` holds the buttons' tap targets: below the board and top right in portrait, in the outer 120 px of each side in landscape. The layout depends on the mode too: in landscape touch mode, `touch` moves the Ladder boards inward. Unit tests check that nothing overlaps, and that every tap target is at least 48 CSS px on windows of 375×553 or 568×320.
 
 ### Debug keys
 
@@ -82,7 +86,7 @@ npm run e2e                       # browser tests against dev and production bui
 npm run record -- [out.webm]      # video of a whole Endless match, about a minute; needs `npm run dev` running
 ```
 
-`npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock. For gameplay, `startStopped` starts a match on a seed with its clock stopped and `advance` runs an exact number of ticks. For another orientation, set the viewport size; `e2e/responsive.spec.js` has helpers. `e2e/touch.spec.js` sends real touch events through Chromium. `e2e/landscape.spec.js` fails if anything moves at 960×540; if that's intended, run `UPDATE_LANDSCAPE=1 npx playwright test landscape` and review the diff.
+`npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock. For gameplay, `startStopped` starts a match on a seed with its clock stopped and `advance` runs an exact number of ticks. For another orientation, set the viewport size; `e2e/responsive.spec.js` has helpers. `e2e/touch.spec.js` sends real touch events through Chromium; `fingers` in `e2e/support.js` presses, drags and lifts several. A page with a touch screen starts in touch mode, but starting a match with `startStopped` switches to keyboard mode, so call `useTouch` after it. `e2e/touch-flow.spec.js` plays the whole loop by touch. `e2e/landscape.spec.js` fails if anything moves at 960×540 in keyboard mode; if that's intended, run `UPDATE_LANDSCAPE=1 npx playwright test landscape` and review the diff.
 
 GitHub Actions runs check, build and e2e on every push and pull request; a failed run keeps its report and videos for 14 days.
 
@@ -93,6 +97,7 @@ src/main.js                Phaser.Game config (FIT, pixelArt, no physics)
 src/config/                tunables (rules.js: the ones that affect results)
 src/core/                  the rules engine: pure, deterministic, no Phaser
 src/match/                 tick runner, keyboard and touch input, stats
+src/ui/                    buttons, how they handle presses, and the input mode
 src/debug/                 debug keys and boards (dev builds)
 src/layout/                screen size and where everything goes
 src/view/                  board models (pure) and drawing

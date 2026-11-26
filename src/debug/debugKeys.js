@@ -11,7 +11,8 @@ export default class DebugKeys {
     this.reset();
     const style = { fontFamily: FLOW.fontFamily, fontSize: '12px', color: FLOW.mutedColor, align: 'center' };
     const hint = match.add.text(0, 0, DEBUG.hint, style).setOrigin(0.5);
-    onLayout(match, (layout) => placeText(hint, layout.match.debugHint));
+    // The keys need a keyboard, and in portrait the hint would sit under the touch buttons.
+    onLayout(match, (layout) => placeText(hint.setVisible(layout.mode === 'keyboard'), layout.match.debugHint));
   }
 
   /** Call when a new match begins. */

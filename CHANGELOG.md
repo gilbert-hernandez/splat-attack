@@ -4,6 +4,18 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.1.3] - 2026-11-25
+
+### Added
+
+- **Touch buttons** (SA-28): clockwise, counterclockwise and pause buttons in a match, with a slot kept for the meter (SA-9). They sit below the board in portrait and at the sides in landscape, with tap targets of at least 48 CSS px, and work while another finger drags.
+- **Touch and keyboard modes** (SA-28): the game switches by itself. Match buttons and the title's hint follow the mode. In landscape touch mode the Ladder boards move inward; keyboard mode is unchanged.
+- **Touch art entries** (SA-28): the SA-30 touch button and four icons in the manifest and `ASSETS.md`, with placeholders and stand-in symbols.
+
+### Fixed
+
+- Menu buttons ignore cancelled touches and other fingers, and never stay highlighted after a tap. The result ignores taps for its first half-second, as it does keys.
+
 ## [0.1.2] - 2026-11-25
 
 ### Added

@@ -9,8 +9,17 @@ export const FLOW = {
   pauseInputDelayMs: 150,
   // The final board stays this many ticks before the result.
   gameOverTicks: 90,
-  // Result keys are ignored this long, so keys mashed at the end don't skip it.
+  // Result keys and touches are ignored this long, so input mashed at the end doesn't skip it.
   resultInputDelayMs: 500,
-  hint: 'A/D or ←/→ move · S or ↓ drop · Q/E or Z/X rotate · Space meter · Esc pause',
+  // The title's controls, for the input mode.
+  hints: {
+    keyboard: 'A/D or ←/→ move · S or ↓ drop · Q/E or Z/X rotate · Space meter · Esc pause',
+    touch: 'Drag to move · Tap to rotate · Drag down to drop · Buttons rotate and pause',
+  },
   modes: { ladder: 'LADDER', endless: 'ENDLESS' },
+  // Match buttons: the symbol shown while an icon's art is missing, and tints for the placeholder button.
+  touchSymbols: { cw: '↻', ccw: '↺', pause: 'II', meter: '★' },
+  touchTints: { normal: 0x4c4670, pressed: 0x7d6fc4 },
+  // An icon without a button behind it dims while pressed.
+  pressedAlpha: 0.6,
 };

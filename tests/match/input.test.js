@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONTROLS } from '../../src/config/input.js';
 import { INPUT, createState, step } from '../../src/core/engine.js';
+import TouchGestures from '../../src/match/gestures.js';
 import MatchInput from '../../src/match/input.js';
 
 const { LEFT, RIGHT, ROTATE_CW, ROTATE_CCW, SOFT_DROP } = INPUT;
@@ -113,5 +114,41 @@ describe('match input', () => {
     const input = pressed('KeyA', 'KeyE', 'KeyS');
     input.releaseAll();
     expect(ticksWith(input, 31, 40)).toEqual([]);
+  });
+});
+
+describe('rotate buttons', () => {
+  it.each([
+    ['cw', ROTATE_CW],
+    ['ccw', ROTATE_CCW],
+  ])('%s acts once on the next tick', (action, bit) => {
+    const input = new MatchInput();
+    input.turn(/** @type {'cw' | 'ccw'} */ (action));
+    expect(ticksWith(input, bit, 40)).toEqual([0]);
+  });
+
+  it('combines with keys and with the other button', () => {
+    const input = pressed('KeyA', 'KeyS');
+    input.turn('cw');
+    input.turn('ccw');
+    expect(input.next()).toBe(LEFT | SOFT_DROP | ROTATE_CW | ROTATE_CCW);
+    expect(input.next() & (ROTATE_CW | ROTATE_CCW)).toBe(0);
+  });
+
+  it('combines with a drag', () => {
+    const input = new MatchInput();
+    const touch = new TouchGestures();
+    touch.begin(1, 100, 100, 1);
+    touch.move(1, 130, 102);
+    input.turn('ccw');
+    expect(input.next() | touch.next()).toBe(RIGHT | ROTATE_CCW);
+    expect(input.next() | touch.next()).toBe(0);
+  });
+
+  it('is dropped by releaseAll', () => {
+    const input = new MatchInput();
+    input.turn('cw');
+    input.releaseAll();
+    expect(input.next()).toBe(0);
   });
 });

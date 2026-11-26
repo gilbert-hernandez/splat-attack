@@ -146,3 +146,62 @@ export async function releaseKey(page, code) {
     code,
   );
 }
+
+/** Fingers on the screen, in CSS pixels, sent through the browser's own touch input. */
+export async function fingers(page) {
+  const cdp = await page.context().newCDPSession(page);
+  /** @type {Map<number, {x: number, y: number}>} */
+  const down = new Map();
+  const points = (ids = [...down.keys()]) => ids.map((id) => ({ id, ...down.get(id) }));
+  const send = async (type, touchPoints) => {
+    await cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
+    await waitFrames(page, 3);
+  };
+  return {
+    press: (x, y, id = 0) => {
+      down.set(id, { x, y });
+      return send('touchStart', points());
+    },
+    /** Moves a finger by some travel, through some points. */
+    drag: async (dx, dy, { id = 0, steps = 4 } = {}) => {
+      const from = down.get(id);
+      for (let i = 1; i <= steps; i++) {
+        down.set(id, { x: from.x + (dx * i) / steps, y: from.y + (dy * i) / steps });
+        await send('touchMove', points());
+      }
+    },
+    /** Lifts one finger, the others staying down. CDP releases the fingers a move leaves out. */
+    liftOne: (id) => {
+      down.delete(id);
+      return down.size ? send('touchMove', points()) : send('touchEnd', []);
+    },
+    /** Lifts every finger. */
+    lift: () => {
+      down.clear();
+      return send('touchEnd', []);
+    },
+    cancel: () => {
+      down.clear();
+      return send('touchCancel', []);
+    },
+  };
+}
+
+/** Page coordinates (CSS pixels) of a point in game pixels. */
+export async function toPage(page, x, y) {
+  const box = await page.locator('#game canvas').boundingBox();
+  const width = await page.evaluate(() => window.__GAME__.scale.gameSize.width);
+  const scale = box.width / width;
+  return { x: box.x + x * scale, y: box.y + y * scale, scale };
+}
+
+/** Switch to touch mode without touching anything, as starting a match with keys leaves keyboard mode. */
+export async function useTouch(page) {
+  await page.evaluate(() => window.__GAME__.registry.get('inputMode').set('touch'));
+  await waitFrames(page, 2);
+}
+
+/** The input mode: 'touch' or 'keyboard'. */
+export function inputMode(page) {
+  return page.evaluate(() => window.__GAME__.registry.get('layout').layout.mode);
+}

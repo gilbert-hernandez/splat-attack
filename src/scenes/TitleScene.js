@@ -18,13 +18,15 @@ export default class TitleScene extends Phaser.Scene {
   create() {
     const style = { fontFamily: FLOW.fontFamily, fontSize: '14px', color: FLOW.mutedColor, align: 'center' };
     this.startButton = new Button(this, 'START', () => this.start());
-    const hint = this.add.text(0, 0, FLOW.hint, style).setOrigin(0.5);
+    const hint = this.add.text(0, 0, '', style).setOrigin(0.5);
     this.versionText = this.add
       .text(0, 0, versionLabel(__APP_VERSION__, __APP_COMMIT__, import.meta.env.DEV), style)
       .setOrigin(0, 1);
-    onLayout(this, ({ title }) => {
+    this.hintText = hint;
+    onLayout(this, ({ title, mode }) => {
       this.placeArt(title);
       this.startButton.place(title.start);
+      hint.setText(FLOW.hints[mode]);
       placeText(hint, title.hint);
       placeText(this.versionText, title.version);
     });

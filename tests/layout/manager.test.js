@@ -71,6 +71,19 @@ describe('LayoutManager', () => {
     expect(place.mock.lastCall[1]).toBe(true);
   });
 
+  it('switches mode without rotating, and keeps it through window changes', () => {
+    const { scale, manager, place } = make();
+    manager.setMode('touch');
+    manager.setMode('touch');
+    expect(place).toHaveBeenCalledTimes(2);
+    expect(place.mock.lastCall).toEqual([manager.layout, false]);
+    expect(manager.layout.mode).toBe('touch');
+    expect(manager.layout.match.ladder.player.x).toBe(136);
+    scale.window(375, 667);
+    expect(place.mock.lastCall[0]).toMatchObject({ mode: 'touch', screen: { orientation: 'portrait' } });
+    expect(scale.setGameSize).toHaveBeenCalledTimes(1);
+  });
+
   it('forgets a scene at shutdown', () => {
     const { scale, manager, events, place } = make();
     events.emit('shutdown');

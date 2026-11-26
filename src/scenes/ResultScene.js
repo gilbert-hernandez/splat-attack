@@ -30,8 +30,10 @@ export default class ResultScene extends Phaser.Scene {
     this.scoreText = text(28, `SCORE ${score}`);
     const rows = [`LEVEL ${level}`, `PAIRS ${pairs}`, `LONGEST CHAIN ${longestChain}`, `TIME ${formatTime(ticks)}`];
     this.statTexts = rows.map((row) => text(16, row));
-    this.againButton = new Button(this, 'PLAY AGAIN', () => this.playAgain());
-    this.titleButton = new Button(this, 'TITLE', () => this.toTitle());
+    // A finger still tapping from the match mustn't leave the result; a mouse click is deliberate.
+    const options = { accept: (pointer) => this.ready || !pointer.wasTouch };
+    this.againButton = new Button(this, 'PLAY AGAIN', () => this.playAgain(), options);
+    this.titleButton = new Button(this, 'TITLE', () => this.toTitle(), options);
     onLayout(this, ({ result }) => {
       panel.setTexture(result.panel.key).setPosition(result.panel.x, result.panel.y).clearTint();
       if (placeholders.includes(result.panel.key)) panel.setTint(FLOW.panelTint);

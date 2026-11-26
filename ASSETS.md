@@ -151,16 +151,21 @@ Not loaded by the game (SA-25): a 1200×630 social-preview image and a 640×360 
 
 ### SA-30: Portrait screens
 
-For phones held upright, where the game is 360 wide and 640 to 780 tall. Reuse the designs from SA-23 to SA-25. The touch button and icons on the ticket are added here with SA-28.
+For phones held upright, where the game is 360 wide and 640 to 780 tall. Reuse the designs from SA-23 to SA-25. The touch button and icons are used in both orientations whenever the player uses touch.
 
-| Ticket | File                              | Size    | Frames | Notes                                                      |
-| ------ | --------------------------------- | ------- | ------ | ---------------------------------------------------------- |
-| SA-30  | `sa_bg_wall1_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom |
-| SA-30  | `sa_bg_wall2_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom |
-| SA-30  | `sa_bg_wall3_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom |
-| SA-30  | `sa_bg_wall4_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom |
-| SA-30  | `sa_bg_wall5_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom |
-| SA-30  | `sa_ui_title_bg_portrait.png`     | 360×780 | 1      | Opaque, same cropping; leave the center clear              |
-| SA-30  | `sa_ui_logo_portrait.png`         | 320×112 | 1      | Logo for narrow screens                                    |
-| SA-30  | `sa_ui_result_panel_portrait.png` | 340×400 | 1      | Behind the score breakdown                                 |
-| SA-30  | `sa_ui_ladder_portrait.png`       | 340×400 | 1      | 5 rival slots                                              |
+| Ticket | File                              | Size    | Frames | Notes                                                          |
+| ------ | --------------------------------- | ------- | ------ | -------------------------------------------------------------- |
+| SA-30  | `sa_bg_wall1_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom     |
+| SA-30  | `sa_bg_wall2_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom     |
+| SA-30  | `sa_bg_wall3_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom     |
+| SA-30  | `sa_bg_wall4_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom     |
+| SA-30  | `sa_bg_wall5_portrait.png`        | 360×780 | 1      | Opaque; up to 70 px can be cropped from the top and bottom     |
+| SA-30  | `sa_ui_title_bg_portrait.png`     | 360×780 | 1      | Opaque, same cropping; leave the center clear                  |
+| SA-30  | `sa_ui_logo_portrait.png`         | 320×112 | 1      | Logo for narrow screens                                        |
+| SA-30  | `sa_ui_result_panel_portrait.png` | 340×400 | 1      | Behind the score breakdown                                     |
+| SA-30  | `sa_ui_ladder_portrait.png`       | 340×400 | 1      | 5 rival slots                                                  |
+| SA-30  | `sa_ui_touch_button.png`          | 72×72   | 2      | Normal, pressed (sheet is 144×72); an icon sits centered on it |
+| SA-30  | `sa_ui_touch_cw.png`              | 48×48   | 1      | Rotate clockwise; reads without text                           |
+| SA-30  | `sa_ui_touch_ccw.png`             | 48×48   | 1      | Rotate counterclockwise; reads without text                    |
+| SA-30  | `sa_ui_touch_pause.png`           | 48×48   | 1      | Pause; shown alone, without the button                         |
+| SA-30  | `sa_ui_touch_meter.png`           | 48×48   | 1      | Meter move (used from SA-9)                                    |

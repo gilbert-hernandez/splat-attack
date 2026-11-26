@@ -25,12 +25,14 @@ describe('screenFor', () => {
   ])('%ix%i gives nothing', (w, h) => expect(screenFor(w, h)).toBeNull());
 });
 
-const portrait = (height) => layoutFor({ orientation: 'portrait', width: 360, height });
+const portrait = (height, mode = undefined) => layoutFor({ orientation: 'portrait', width: 360, height }, mode);
+const landscape = (mode = undefined) => layoutFor({ orientation: 'landscape', width: 960, height: 540 }, mode);
 
-/** The named rectangles of a portrait match. */
+/** The named rectangles of a match: areas, buttons, boards and next boxes. */
 function rects(layout, mode) {
-  const { areas, [mode]: boards } = layout.match;
+  const { areas = {}, buttons, [mode]: boards } = layout.match;
   const out = { ...areas };
+  for (const [name, r] of Object.entries(buttons)) out[`button ${name}`] = r;
   for (const [name, board] of Object.entries(boards)) {
     if (name === 'gameOver') continue;
     const { x, y, scale, next } = board;
@@ -49,17 +51,39 @@ function rects(layout, mode) {
   return Object.entries(out);
 }
 
+const inside = (r, o) => r.x >= o.x && r.y >= o.y && r.x + r.width <= o.x + o.width && r.y + r.height <= o.y + o.height;
+const apart = (r, o) => r.x + r.width <= o.x || o.x + o.width <= r.x || r.y + r.height <= o.y || o.y + o.height <= r.y;
+const BELOW = ['button ccw', 'button meter', 'button cw'];
+
+/** Fails unless every rectangle is on the screen and none overlap, but the bottom buttons in `touch`. */
+function expectApart(layout, mode) {
+  const all = rects(layout, mode);
+  const { width, height } = layout.screen;
+  for (const [name, r] of all) {
+    expect(inside(r, { x: 0, y: 0, width, height }), name).toBe(true);
+    for (const [other, o] of all) {
+      if (other === name || (other === 'touch' && BELOW.includes(name)) || (name === 'touch' && BELOW.includes(other)))
+        continue;
+      expect(apart(r, o), `${name} and ${other}`).toBe(true);
+    }
+  }
+  return Object.fromEntries(all);
+}
+
 describe.each([640, 700, 780])('portrait match at height %i', (height) => {
   it.each(['ladder', 'endless'])('%s: nothing overlaps or leaves the screen', (mode) => {
-    const all = rects(portrait(height), mode);
-    expect(all.map(([name]) => name)).toHaveLength(mode === 'ladder' ? 9 : 8);
-    for (const [name, r] of all) {
-      expect(r.x >= 0 && r.y >= 0 && r.x + r.width <= 360 && r.y + r.height <= height, name).toBe(true);
-      for (const [other, o] of all) {
-        if (other === name) continue;
-        const apart = r.x + r.width <= o.x || o.x + o.width <= r.x || r.y + r.height <= o.y || o.y + o.height <= r.y;
-        expect(apart, `${name} and ${other}`).toBe(true);
-      }
+    for (const input of ['keyboard', 'touch']) {
+      const all = expectApart(portrait(height, input), mode);
+      expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 12 : 11);
+    }
+  });
+
+  it('keeps the rotate buttons and meter slot centered in the touch area', () => {
+    const { areas, buttons } = portrait(height).match;
+    for (const name of ['ccw', 'meter', 'cw']) {
+      const r = buttons[name];
+      expect(inside(r, areas.touch), name).toBe(true);
+      expect(r.y - areas.touch.y).toBe(areas.touch.y + areas.touch.height - (r.y + r.height));
     }
   });
 
@@ -78,18 +102,63 @@ describe.each([640, 700, 780])('portrait match at height %i', (height) => {
 });
 
 it('layouts never change the configuration', () => {
-  portrait(780);
+  portrait(780, 'touch');
+  landscape('touch');
   expect(portrait(640).match.areas.touch.height).toBe(120);
+  expect(portrait(640).match.buttons.cw.y).toBe(520);
+  expect(landscape().match.ladder.player.x).toBe(64);
+});
+
+// In keyboard mode the buttons are hidden, so only touch mode must keep them clear.
+describe('landscape match in touch mode', () => {
+  it.each(['ladder', 'endless'])('%s: nothing overlaps or leaves the screen', (mode) => {
+    const all = expectApart(landscape('touch'), mode);
+    expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 8 : 7);
+  });
+});
+
+it('touch mode moves only the landscape Ladder boards', () => {
+  const { touch, ...keyboard } = /** @type {any} */ (landscape('keyboard'));
+  const touched = landscape('touch');
+  expect(touched.mode).toBe('touch');
+  expect(touched.match.ladder.player.x).toBe(136);
+  expect({ ...touched, mode: 'keyboard', match: { ...touched.match, ladder: keyboard.match.ladder } }).toEqual(
+    keyboard,
+  );
+  expect(touch).toBeUndefined();
+  const { mode: _a, ...tallTouch } = portrait(700, 'touch');
+  const { mode: _b, ...tallKeys } = portrait(700, 'keyboard');
+  expect(tallTouch).toEqual(tallKeys);
+});
+
+describe('tap targets are at least 48 CSS px', () => {
+  // CSS pixels per game pixel when the game fits a window.
+  const fitScale = (w, h) => {
+    const screen = screenFor(w, h);
+    return { screen, scale: Math.min(w / screen.width, h / screen.height) };
+  };
+  it.each([
+    [375, 553],
+    [360, 640],
+    [568, 320],
+    [667, 331],
+  ])('at %ix%i', (w, h) => {
+    const { screen, scale } = fitScale(w, h);
+    for (const [name, r] of Object.entries(layoutFor(screen, 'touch').match.buttons)) {
+      expect(Math.min(r.width, r.height) * scale, name).toBeGreaterThanOrEqual(48);
+    }
+  });
 });
 
 it('both orientations place the same things', () => {
-  const landscape = layoutFor({ orientation: 'landscape', width: 960, height: 540 });
+  const wide = landscape();
   const tall = portrait(640);
-  for (const key of Object.keys(landscape)) {
+  for (const key of Object.keys(wide)) {
+    if (typeof wide[key] !== 'object') continue;
     const names = (layout) =>
       Object.keys(layout[key])
         .filter((name) => name !== 'areas')
         .sort();
-    expect(names(tall), key).toEqual(names(landscape));
+    expect(names(tall), key).toEqual(names(wide));
   }
 });

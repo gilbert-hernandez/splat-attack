@@ -8,11 +8,13 @@ export default class LayoutManager {
   /**
    * @param {any} scale Phaser's scale manager
    * @param {import('./layout.js').Screen} screen the size the game was made with
+   * @param {import('./layout.js').Mode} [mode]
    */
-  constructor(scale, screen) {
+  constructor(scale, screen, mode = 'keyboard') {
     this.scale = scale;
     this.screen = screen;
-    this.layout = layoutFor(screen);
+    this.mode = mode;
+    this.layout = layoutFor(screen, mode);
     /** @type {Set<Place>} */
     this.listeners = new Set();
     scale.on('resize', () => this.check());
@@ -26,8 +28,18 @@ export default class LayoutManager {
     // This reports a resize too, which can find a newer size and finish the change itself.
     this.scale.setGameSize(screen.width, screen.height);
     if (this.screen !== screen) return;
-    const rotated = this.layout.screen.orientation !== screen.orientation;
-    this.layout = layoutFor(screen);
+    this.relayout(this.layout.screen.orientation !== screen.orientation);
+  }
+
+  /** Switches between the touch and keyboard layouts. @param {import('./layout.js').Mode} mode */
+  setMode(mode) {
+    if (mode === this.mode) return;
+    this.mode = mode;
+    this.relayout(false);
+  }
+
+  relayout(rotated) {
+    this.layout = layoutFor(this.screen, this.mode);
     for (const listener of [...this.listeners]) {
       if (this.listeners.has(listener)) listener(this.layout, rotated);
     }

@@ -8,6 +8,8 @@ export const SCREENS = {
 };
 
 // `bottom` instead of `y` is measured up from the screen's bottom edge.
+// `match.buttons` are the touch buttons' tap targets (top-left and size); `touch` replaces parts of the
+// layout in touch mode.
 export const LAYOUT = {
   landscape: {
     preload: { bar: { x: 480, y: 270, width: 320, height: 16 } },
@@ -49,6 +51,23 @@ export const LAYOUT = {
         gameOver: { x: 480, y: 270 },
       },
       debugHint: { x: 480, bottom: 12 },
+      // In the outer 120 px of each side.
+      buttons: {
+        pause: { x: 852, y: 16, width: 96, height: 96 },
+        meter: { x: 8, y: 280, width: 104, height: 104 },
+        ccw: { x: 8, y: 400, width: 104, height: 104 },
+        cw: { x: 848, y: 400, width: 104, height: 104 },
+      },
+    },
+    // Ladder's boards move inward to clear the buttons.
+    touch: {
+      match: {
+        ladder: {
+          player: { x: 136, y: 100, scale: 1, next: { x: 376, y: 100, spacing: 104 } },
+          rival: { x: 600, y: 100, scale: 1 },
+          gameOver: { x: 248, y: 270 },
+        },
+      },
     },
     ui: {
       mode: { x: 480, y: 20, size: 20 },
@@ -101,10 +120,16 @@ export const LAYOUT = {
       // Space kept free. `hud` holds the ui texts; extra screen height goes to `touch`.
       areas: {
         hud: { x: 56, y: 0, width: 248, height: 56 },
-        pause: { x: 304, y: 4, width: 48, height: 48 },
         gunk: { x: 0, y: 56, width: 360, height: 28 },
         meter: { x: 8, y: 488, width: 200, height: 16 },
         touch: { x: 0, y: 512, width: 360, height: 120 },
+      },
+      // Pause in the top-right corner; the rest centered in the touch area, also when it grows.
+      buttons: {
+        pause: { x: 304, y: 0, width: 56, height: 56 },
+        ccw: { x: 8, y: 520, width: 104, height: 104 },
+        meter: { x: 128, y: 520, width: 104, height: 104 },
+        cw: { x: 248, y: 520, width: 104, height: 104 },
       },
     },
     ui: {

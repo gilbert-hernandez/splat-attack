@@ -1,20 +1,23 @@
 import Phaser from 'phaser';
 import { FLOW } from '../config/index.js';
+import PressRule from './pressRule.js';
 
 const KEY = 'ui_button';
 const FRAMES = { normal: 0, hover: 1, pressed: 2 };
 
-/** A menu button using the `ui_button` sheet. Acts when a press that began on it is released on it. */
+/**
+ * A menu button using the `ui_button` sheet. Acts when a press that began on it is released on it by
+ * the same pointer; a cancelled touch never acts. Only the mouse hovers.
+ */
 export default class Button extends Phaser.GameObjects.Container {
   /**
    * @param {Phaser.Scene} scene
    * @param {string} label
    * @param {() => void} onClick
+   * @param {{accept?: (pointer: Phaser.Input.Pointer) => boolean}} [options] `accept` can refuse a press
    */
-  constructor(scene, label, onClick) {
+  constructor(scene, label, onClick, { accept = () => true } = {}) {
     super(scene, 0, 0);
-    this.armed = false;
-    this.over = false;
     this.placeholder = (scene.registry.get('placeholders') ?? []).includes(KEY);
     this.image = scene.add.sprite(0, 0, KEY, FRAMES.normal);
     this.label = scene.add
@@ -22,40 +25,35 @@ export default class Button extends Phaser.GameObjects.Container {
       .setOrigin(0.5);
     this.add([this.image, this.label]);
     scene.add.existing(this);
-
-    const set = (changes) => {
-      Object.assign(this, changes);
-      this.refresh();
-    };
     this.image.setInteractive({ useHandCursor: true });
-    this.image.on('pointerover', () => set({ over: true }));
-    this.image.on('pointerout', () => set({ over: false }));
-    this.image.on('pointerdown', () => set({ armed: true }));
-    this.image.on('pointerup', () => {
-      const act = this.armed;
-      set({ armed: false });
-      if (act) onClick();
+    this.press = new PressRule(scene, this.image, {
+      accept,
+      onRelease: onClick,
+      onChange: () => this.refresh(),
     });
-    // A release anywhere else cancels the press. The button's own pointerup runs first.
-    const disarm = () => this.armed && set({ armed: false });
-    scene.input.on('pointerup', disarm);
-    scene.input.on('pointerupoutside', disarm);
-    this.once(Phaser.GameObjects.Events.DESTROY, () => {
-      scene.input.off('pointerup', disarm);
-      scene.input.off('pointerupoutside', disarm);
-    });
+    this.once(Phaser.GameObjects.Events.DESTROY, () => this.press.destroy());
     this.refresh();
   }
 
   /** Moves the button's center. A press in progress is cancelled. */
   place({ x, y }) {
     this.setPosition(x, y);
-    this.armed = false;
-    this.refresh();
+    this.press.reset();
+  }
+
+  /** Whether a press is in progress. */
+  get armed() {
+    return this.press.owner !== null;
+  }
+
+  /** 'normal', 'hover' or 'pressed'. */
+  get look() {
+    const { pressed, hover } = this.press;
+    return pressed ? 'pressed' : hover ? 'hover' : 'normal';
   }
 
   refresh() {
-    const state = this.over ? (this.armed ? 'pressed' : 'hover') : 'normal';
+    const state = this.look;
     this.image.setFrame(FRAMES[state]);
     if (this.placeholder) this.image.setTint(FLOW.buttonTints[state]);
   }

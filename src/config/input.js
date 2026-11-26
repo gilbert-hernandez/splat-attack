@@ -12,6 +12,8 @@ export const CONTROLS = {
     KeyQ: 'ccw',
     KeyZ: 'ccw',
   },
+  // Menu keys. These and the match keys switch to keyboard mode; others (such as a phone's volume) don't.
+  menuKeys: ['Enter', 'NumpadEnter', 'Space', 'Escape'],
   // Keys the browser would scroll with.
   captured: 'LEFT,RIGHT,UP,DOWN,SPACE',
   repeatDelay: 10,

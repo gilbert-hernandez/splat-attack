@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
   advance,
   advanceToEnd,
+  fingers,
   holdKey,
   matchState,
   openGame,
@@ -20,41 +21,6 @@ const SOFT_DROP = 16;
 // Columns per finger travel, as in src/config/touch.js.
 const STEP = 34;
 const FIRST = 20;
-
-/** Fingers on the screen, in CSS pixels, sent through the browser's own touch input. */
-async function fingers(page) {
-  const cdp = await page.context().newCDPSession(page);
-  /** @type {Map<number, {x: number, y: number}>} */
-  const down = new Map();
-  const points = (ids = [...down.keys()]) => ids.map((id) => ({ id, ...down.get(id) }));
-  const send = async (type, touchPoints) => {
-    await cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
-    await waitFrames(page, 3);
-  };
-  return {
-    press: (x, y, id = 0) => {
-      down.set(id, { x, y });
-      return send('touchStart', points());
-    },
-    /** Moves a finger by some travel, through some points. */
-    drag: async (dx, dy, { id = 0, steps = 4 } = {}) => {
-      const from = down.get(id);
-      for (let i = 1; i <= steps; i++) {
-        down.set(id, { x: from.x + (dx * i) / steps, y: from.y + (dy * i) / steps });
-        await send('touchMove', points());
-      }
-    },
-    /** Lifts every finger. */
-    lift: () => {
-      down.clear();
-      return send('touchEnd', []);
-    },
-    cancel: () => {
-      down.clear();
-      return send('touchCancel', []);
-    },
-  };
-}
 
 const gesture = (page) =>
   page.evaluate(() => {

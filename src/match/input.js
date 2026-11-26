@@ -40,6 +40,14 @@ export default class MatchInput {
     }
   }
 
+  /**
+   * An on-screen rotate button was pressed: acts once on the next tick, like a key tap, and holds nothing.
+   * @param {'cw' | 'ccw'} action
+   */
+  turn(action) {
+    this.pendingTurns |= BITS[action];
+  }
+
   /** @param {string} code */
   release(code) {
     const before = this.heldMove();

@@ -107,6 +107,8 @@ export const MANIFEST = [
   image('sa_ui_logo_portrait.png', 320, 112, 'SA-30'),
   image('sa_ui_result_panel_portrait.png', 340, 400, 'SA-30'),
   image('sa_ui_ladder_portrait.png', 340, 400, 'SA-30'),
+  sheet('sa_ui_touch_button.png', 72, 72, 2, 'SA-30'),
+  ...['cw', 'ccw', 'pause', 'meter'].map((name) => image(`sa_ui_touch_${name}.png`, 48, 48, 'SA-30')),
 ];
 
 /** Look up an entry by key (throws on typos so they surface immediately). */

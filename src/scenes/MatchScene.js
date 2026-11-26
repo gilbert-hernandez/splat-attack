@@ -6,6 +6,7 @@ import TouchGestures from '../match/gestures.js';
 import MatchInput from '../match/input.js';
 import MatchRunner from '../match/runner.js';
 import MatchStats from '../match/stats.js';
+import TouchButton from '../ui/TouchButton.js';
 import BoardView from '../view/BoardView.js';
 import { addSceneLabel } from './sceneLabel.js';
 
@@ -42,6 +43,7 @@ export default class MatchScene extends Phaser.Scene {
       .setDepth(100);
     this.keys = new MatchInput();
     this.touch = new TouchGestures();
+    this.makeButtons();
     this.debug = DEBUG.enabled ? new DebugKeys(this) : null;
     this.begin(crypto.getRandomValues(new Uint32Array(1))[0]);
     this.listen();
@@ -50,12 +52,29 @@ export default class MatchScene extends Phaser.Scene {
     this.scene.launch('UI');
   }
 
+  /** Rotate and pause buttons for touch. The meter's slot stays empty until SA-9. */
+  makeButtons() {
+    const turn = (action) => () => {
+      if (!this.pauseOpen) this.keys.turn(action);
+    };
+    this.buttons = {
+      ccw: new TouchButton(this, 'ccw', { onPress: turn('ccw') }),
+      cw: new TouchButton(this, 'cw', { onPress: turn('cw') }),
+      pause: new TouchButton(this, 'pause', { onRelease: () => this.openPause() }, true),
+    };
+    for (const button of Object.values(this.buttons)) button.setDepth(50);
+  }
+
   /** @param {import('../layout/layout.js').Layout} layout */
-  place({ match }, rotated) {
+  place({ match, mode }, rotated) {
     const { player, gameOver } = match[this.mode];
     this.view.place(player);
     this.rivalView?.place(match.ladder.rival);
     this.gameOverText.setPosition(gameOver.x, gameOver.y);
+    for (const [name, button] of Object.entries(this.buttons)) {
+      button.place(match.buttons[name]);
+      button.show(mode === 'touch');
+    }
     // Positions shift under the finger.
     this.touch.releaseAll();
     if (rotated) this.openPause();
@@ -113,10 +132,11 @@ export default class MatchScene extends Phaser.Scene {
     this.input.on('pointerupoutside', lift);
   }
 
-  /** Forgets every key and touch. */
+  /** Forgets every key, touch and button press. */
   releaseInput() {
     this.keys.releaseAll();
     this.touch.releaseAll();
+    for (const button of Object.values(this.buttons)) button.press.reset();
   }
 
   /** Starts a match on this seed, replacing any match in progress. */

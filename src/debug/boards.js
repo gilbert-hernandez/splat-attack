@@ -102,6 +102,19 @@ export const BOARDS = [
       .rrr#..`,
   },
   {
+    // Fill the meter and Bomb with the pair in place: gunk and blobs go, and the reds that fall
+    // splat when the pair locks.
+    name: 'bomb',
+    pair: [2, 4],
+    text: `
+      ....r..
+      ....r..
+      ....y..
+      ..+gb..
+      ..#yprr
+      ..gbgyb`,
+  },
+  {
     name: 'mid-game',
     pair: [3, 5],
     text: `

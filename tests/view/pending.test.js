@@ -1,6 +1,7 @@
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { RULES } from '../../src/config/rules.js';
 import { pendingIcons } from '../../src/view/PendingView.js';
+import { fillShown } from '../../src/view/MeterView.js';
 
 const [L, M, S] = ['ui_gunk_large', 'ui_gunk_medium', 'ui_gunk_small'];
 
@@ -22,4 +23,16 @@ it.each([
 
 it('stops at the most icons that fit', () => {
   expect(pendingIcons(13, 4)).toEqual([M, S, S, S]);
+});
+
+describe('meter fill', () => {
+  it.each([
+    [0, 0],
+    [50, 98],
+    [99, 194],
+    [100, 196],
+    [150, 196],
+  ])('shows %i of the meter as %i of 196 px', (meter, shown) => {
+    expect(fillShown(meter, 196)).toBe(shown);
+  });
 });

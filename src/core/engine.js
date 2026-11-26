@@ -4,6 +4,7 @@ import { fallSpeedAt, levelAt } from './level.js';
 import { UP, fallPair, isGrounded, movePair, otherCell, rotatePair } from './pair.js';
 import { nextInt, seedRng } from './rng.js';
 import { dropGunk, gunkSeed, hitGunk } from './gunk.js';
+import { explode, meterFill } from './meter.js';
 import { findGroups, splatPoints, splatPower } from './splat.js';
 import { applyStains, createStains } from './stain.js';
 
@@ -11,7 +12,7 @@ import { applyStains, createStains } from './stain.js';
 // State is plain JSON data, all integers, so it can be copied, compared and replayed.
 
 /** Input bits for one tick. Move and rotate act once per tick they're set; opposites cancel. */
-export const INPUT = { LEFT: 1, RIGHT: 2, ROTATE_CW: 4, ROTATE_CCW: 8, SOFT_DROP: 16 };
+export const INPUT = { LEFT: 1, RIGHT: 2, ROTATE_CW: 4, ROTATE_CCW: 8, SOFT_DROP: 16, RINSE: 32, BOMB: 64 };
 
 /** @typedef {'falling' | 'settling' | 'splatting' | 'over'} Phase */
 
@@ -33,19 +34,25 @@ export const INPUT = { LEFT: 1, RIGHT: 2, ROTATE_CW: 4, ROTATE_CCW: 8, SOFT_DROP
  * @property {number} pending gunk waiting to drop on this board
  * @property {number} gunkRng stream for the columns gunk drops in
  * @property {boolean} dropped true from a gunk drop until the next pair spawns
+ * @property {number} meter the paint meter, 0 to RULES.meter.max
+ * @property {number} meterLock pairs still to spawn before the meter fills again
+ * @property {boolean} armed a Bomb waits for the next falling pair
  */
 
 /**
  * What happened in a tick, for rendering. Events aren't part of the state. A splat's blobs leave
  * the grid at once and stain their cells with the group's color; a gunk hit follows its splat, and
  * cleared gunk leaves at once too. A settle's falls start at once, and the grid already has their
- * end positions.
+ * end positions. A Bomb's cells leave at once and take its stain color; a settle follows it.
  * @typedef {{type: 'lock', cells: {col: number, row: number, color: number}[]}
  *   | {type: 'settle', falls: {col: number, from: number, to: number, color: number}[]}
  *   | {type: 'splat', chain: number, groups: import('./splat.js').Group[], points: number}
  *   | {type: 'gunkHit', cracked: {col: number, row: number}[], cleared: {col: number, row: number}[]}
  *   | {type: 'attack', gunk: number, cancelled: number, sent: number, pending: number}
  *   | {type: 'drop', cells: {col: number, row: number}[]}
+ *   | {type: 'meter', added: number, meter: number}
+ *   | {type: 'rinse', removed: number}
+ *   | {type: 'bomb', target: {col: number, row: number}, cells: {col: number, row: number, was: number}[], color: number}
  *   | {type: 'chainEnd', chain: number, points: number}
  *   | {type: 'over', score: number}} Event
  */
@@ -78,6 +85,9 @@ export function createState(seed, side = 0) {
     pending: 0,
     gunkRng: 0,
     dropped: false,
+    meter: 0,
+    meterLock: 0,
+    armed: false,
   };
   state.gunkRng = gunkSeed(state.rng, side);
   while (state.queue.length < RULES.nextPairs) state.queue.push(drawPair(state));
@@ -96,6 +106,7 @@ export function step(state, input = 0) {
   const events = [];
   if (state.phase === 'over') return events;
   state.tick++;
+  fireMeter(state, input, events);
   if (state.phase === 'falling') {
     stepPair(state, input, events);
     return events;
@@ -105,6 +116,30 @@ export function step(state, input = 0) {
   if (state.phase === 'splatting') settle(state, events);
   else resolve(state, events);
   return events;
+}
+
+/**
+ * Fires a full meter on exactly one of the Rinse and Bomb bits. Rinse acts at once and is refused
+ * with nothing pending; a Bomb goes off now if a pair is falling, or is armed until one is.
+ */
+function fireMeter(state, input, events) {
+  const rinse = (input & INPUT.RINSE) !== 0;
+  const bomb = (input & INPUT.BOMB) !== 0;
+  if (rinse !== bomb && state.meter === RULES.meter.max && (bomb || state.pending > 0)) {
+    state.meter = 0;
+    state.meterLock = RULES.meter.refillPairs;
+    if (rinse) {
+      events.push({ type: 'rinse', removed: state.pending });
+      state.pending = 0;
+    } else {
+      state.armed = true;
+    }
+  }
+  if (state.armed && state.phase === 'falling') {
+    state.armed = false;
+    const { bomb: blast, settle: falls } = explode(state);
+    events.push(blast, falls);
+  }
 }
 
 function stepPair(state, input, events) {
@@ -200,6 +235,11 @@ function splat(state, found, events) {
   state.phase = 'splatting';
   state.wait = RULES.splatTicks;
   events.push({ type: 'splat', chain: state.chain, groups, points });
+  if (state.meterLock === 0 && state.meter < RULES.meter.max) {
+    const added = Math.min(meterFill(groups, state.chain), RULES.meter.max - state.meter);
+    state.meter += added;
+    events.push({ type: 'meter', added, meter: state.meter });
+  }
   const hits = hitGunk(state.grid, groups);
   if (hits.cracked.length > 0 || hits.cleared.length > 0) events.push({ type: 'gunkHit', ...hits });
 }
@@ -213,6 +253,7 @@ export function spawn(state) {
   const [pivot, other] = state.queue.shift();
   state.queue.push(drawPair(state));
   state.pairs++;
+  state.meterLock = Math.max(0, state.meterLock - 1);
   state.pair = { pivot, other, ...SPAWN, orientation: UP, progress: 0, budget: RULES.lockBudget };
   state.phase = 'falling';
 }

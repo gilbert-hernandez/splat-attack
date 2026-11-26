@@ -76,7 +76,7 @@ function find(make, accept) {
 }
 
 const GENERATORS = {
-  versus: () => find(versus, (r) => r.outcome === 'win' && r.cracks > 0 && r.clears > 0),
+  versus: () => find(versus, (r) => r.outcome === 'win' && r.cracks > 0 && r.clears > 0 && r.rinses > 0 && r.bombs > 0),
   random: () => find(random, (r) => r.phase === 'over' && r.score > 0),
   greedy: () =>
     find(
@@ -99,7 +99,8 @@ for (const [name, make] of Object.entries(GENERATORS)) {
   writeFileSync(file, `{\n"expected": ${JSON.stringify(expected, null, 2)},\n"replay": ${JSON.stringify(replay)}\n}\n`);
   const gunk =
     'outcome' in expected ? `, ${expected.outcome}, ${expected.cracks} cracks, ${expected.clears} clears` : '';
+  const meter = `, ${expected.rinses} rinses, ${expected.bombs} bombs`;
   console.log(
-    `${name}: ${expected.ticks} ticks, score ${expected.score}, longest chain ${expected.longestChain}${gunk}`,
+    `${name}: ${expected.ticks} ticks, score ${expected.score}, longest chain ${expected.longestChain}${gunk}${meter}`,
   );
 }

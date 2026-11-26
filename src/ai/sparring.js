@@ -1,6 +1,6 @@
 // The sparring rival: a one-ply greedy player that stands in for the CPU rivals until SA-10. It
 // reads only the board it plays, keeps its own small state outside the match, and gives the same
-// per-tick inputs as a player. Unpaced, it also generates stored replays.
+// per-tick inputs as a player, meter included. Unpaced, it also generates stored replays.
 import { RULES } from '../config/rules.js';
 import { INPUT } from '../core/engine.js';
 import { COLUMNS, EMPTY, ROWS, applyGravity, cellAt, isColor, setCell } from '../core/grid.js';
@@ -68,8 +68,16 @@ function shape(grid) {
 }
 
 /**
+ * @typedef {object} Pace
+ * @property {number} actEvery
+ * @property {number} dropDelay
+ * @property {number} rinseAt
+ * @property {number} bombRows
+ */
+
+/**
  * @typedef {object} Sparring
- * @property {{actEvery: number, dropDelay: number}} pace
+ * @property {Pace} pace
  * @property {{col: number, orientation: number, value: number} | null} plan
  * @property {number} pairs the board's pair count when the plan was made
  * @property {number} cooldown ticks until the next move or rotation
@@ -78,11 +86,26 @@ function shape(grid) {
 
 /**
  * A sparring rival's own state. Keep one per board, next to the match.
- * @param {{actEvery: number, dropDelay: number}} [pace]
+ * @param {Partial<Pace>} [pace] overrides RULES.sparring
  * @returns {Sparring}
  */
-export function createSparring(pace = RULES.sparring) {
-  return { pace, plan: null, pairs: -1, cooldown: 0, waited: 0 };
+export function createSparring(pace = {}) {
+  return { pace: { ...RULES.sparring, ...pace }, plan: null, pairs: -1, cooldown: 0, waited: 0 };
+}
+
+/**
+ * The meter bit a full meter calls for: Rinse once enough gunk is pending, or else Bomb when the
+ * stack nears the top. 0 otherwise.
+ * @param {import('../core/engine.js').State} board
+ * @param {Pace} pace
+ */
+export function meterInput(board, { rinseAt, bombRows }) {
+  if (board.meter < RULES.meter.max) return 0;
+  if (board.pending >= rinseAt) return INPUT.RINSE;
+  for (let row = RULES.hiddenRows; row < RULES.hiddenRows + bombRows; row++) {
+    for (let col = 0; col < COLUMNS; col++) if (cellAt(board.grid, col, row) !== EMPTY) return INPUT.BOMB;
+  }
+  return 0;
 }
 
 /**
@@ -95,7 +118,8 @@ export function sparringInput(bot, board) {
   if (bot.pairs !== board.pairs) {
     Object.assign(bot, { plan: planPair(board), pairs: board.pairs, cooldown: 0, waited: 0 });
   }
-  const input = greedyInput(board, bot.plan);
+  const meter = meterInput(board, bot.pace);
+  const input = meter || greedyInput(board, bot.plan);
   if (input === INPUT.SOFT_DROP) {
     if (bot.waited < bot.pace.dropDelay) {
       bot.waited++;

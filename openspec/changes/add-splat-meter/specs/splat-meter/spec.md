@@ -117,7 +117,7 @@ Firing the meter SHALL add no points and cost none. Cells cleared by a Bomb SHAL
 
 #### Scenario: Fallout chain
 - **WHEN** a Bomb's gravity leaves four connected blobs of one color, and the next pair then locks
-- **THEN** those blobs splat as chain step 1 of that pair's chain, scoring and filling the meter normally
+- **THEN** those blobs splat as chain step 1 of that pair's chain and score normally, while the refill limit still keeps the meter empty
 
 #### Scenario: Rinse during an attack
 - **WHEN** a board fires Rinse while its chain is still building attack power

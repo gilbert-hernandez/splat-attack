@@ -217,10 +217,10 @@ describe('events', () => {
   it('reports a splat, then the falls after it', () => {
     const { state } = lockLeft('.rrr...');
     const { events } = finish(state);
-    expect(events.map((e) => e.type)).toEqual(['splat', 'settle', 'chainEnd']);
+    expect(events.map((e) => e.type)).toEqual(['splat', 'meter', 'settle', 'chainEnd']);
     const cells = [0, 1, 2, 3].map((col) => ({ col, row: ROWS - 1 }));
     expect(events[0].groups).toEqual([{ color: RED, cells, matched: [] }]);
-    expect(events[1].falls).toEqual([{ col: 0, from: ROWS - 2, to: ROWS - 1, color: BLUE }]);
+    expect(events[2].falls).toEqual([{ col: 0, from: ROWS - 2, to: ROWS - 1, color: BLUE }]);
   });
 
   it('reports nothing on quiet ticks and after the match', () => {
@@ -230,10 +230,10 @@ describe('events', () => {
     expect(step(state, SOFT)).toEqual([]);
   });
 
-  it('is enough to rebuild the board, gunk and stains, over random matches', () => {
+  it('is enough to rebuild the board, gunk and stains, Bombs included, over random matches', () => {
     let splats = 0;
     let matches = 0;
-    const seen = { drop: 0, gunkHit: 0 };
+    const seen = { drop: 0, gunkHit: 0, bomb: 0 };
     for (let seed = 0; seed < 30; seed++) {
       const state = createState(seed);
       const view = createGrid();
@@ -241,7 +241,8 @@ describe('events', () => {
       let rng = seed + 500;
       let last = null;
       while (state.phase !== 'over') {
-        const draw = nextInt(rng, 32);
+        // All seven bits, so full meters fire Rinse and Bomb.
+        const draw = nextInt(rng, 128);
         rng = draw.rng;
         // Gunk now and then, as a rival would send it.
         if (state.tick % 500 === 250) state.pending += 2 + (state.tick % 5);
@@ -254,6 +255,7 @@ describe('events', () => {
             for (const { color, cells } of event.groups)
               for (const { col, row } of cells) setCell(stains, col, row, color);
           }
+          if (event.type === 'bomb') for (const { col, row } of event.cells) setCell(stains, col, row, event.color);
           apply(view, event);
         }
         if (view.join() !== state.grid.join()) throw new Error(`seed ${seed} differs at tick ${state.tick}`);
@@ -265,6 +267,7 @@ describe('events', () => {
     expect(matches).toBeGreaterThan(0);
     expect(seen.drop).toBeGreaterThan(10);
     expect(seen.gunkHit).toBeGreaterThan(0);
+    expect(seen.bomb).toBeGreaterThan(0);
   });
 
   it('cannot affect the match', () => {
@@ -300,5 +303,6 @@ function apply(view, event) {
     for (const { col, row } of event.cleared) setCell(view, col, row, EMPTY);
   }
   if (event.type === 'drop') for (const { col, row } of event.cells) setCell(view, col, row, GUNK);
+  if (event.type === 'bomb') for (const { col, row } of event.cells) setCell(view, col, row, EMPTY);
   expect(view).toHaveLength(COLUMNS * ROWS);
 }

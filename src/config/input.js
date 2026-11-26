@@ -11,7 +11,13 @@ export const CONTROLS = {
     KeyX: 'cw',
     KeyQ: 'ccw',
     KeyZ: 'ccw',
+    Space: 'meter',
   },
+  // While the meter choice is open, these actions pick instead: the left-hand keys Rinse, the
+  // right-hand keys Bomb.
+  choiceKeys: { left: 'rinse', ccw: 'rinse', right: 'bomb', cw: 'bomb' },
+  // The meter choice closes by itself after this many ticks.
+  choiceTicks: 120,
   // Menu keys. These and the match keys switch to keyboard mode; others (such as a phone's volume) don't.
   menuKeys: ['Enter', 'NumpadEnter', 'Space', 'Escape'],
   // Keys the browser would scroll with.

@@ -8,22 +8,38 @@ const BITS = {
   ccw: INPUT.ROTATE_CCW,
   drop: INPUT.SOFT_DROP,
 };
+const PICKS = { rinse: INPUT.RINSE, bomb: INPUT.BOMB };
+const MOVES = INPUT.LEFT | INPUT.RIGHT | INPUT.ROTATE_CW | INPUT.ROTATE_CCW;
 const isMove = (action) => action === 'left' || action === 'right';
 
-/** Turns key presses into one input mask per tick. No Phaser and no clock. */
+/**
+ * Turns key presses into one input mask per tick, and holds the meter choice: while it is open, move
+ * and rotate keys pick Rinse or Bomb instead of acting. No Phaser and no clock.
+ */
 export default class MatchInput {
-  constructor() {
+  /**
+   * @param {object} [rules] what the board allows, asked when needed
+   * @param {() => boolean} [rules.canOpen] whether the choice may open (the meter is full)
+   * @param {() => boolean} [rules.canRinse] whether Rinse can be picked (gunk is pending)
+   * @param {() => void} [rules.onOpen] the choice opened
+   */
+  constructor({ canOpen = () => true, canRinse = () => true, onOpen = () => {} } = {}) {
+    this.rules = { canOpen, canRinse, onOpen };
     this.releaseAll();
   }
 
-  /** Forgets held keys and unused presses. */
+  /** Forgets held keys and unused presses, and closes the choice. */
   releaseAll() {
     /** Held codes, oldest first. @type {string[]} */
     this.held = [];
+    /** Held codes that act no more until pressed again: they were held as the choice opened, or picked. */
+    this.spent = new Set();
     this.pendingMove = 0;
     this.pendingTurns = 0;
     /** Ticks since the acting move key began repeating. */
     this.charge = 0;
+    /** The meter choice: open, ticks left before it closes by itself, and the pick for the next tick. */
+    this.choice = { open: false, ticks: 0, picked: 0 };
   }
 
   /** @param {string} code KeyboardEvent.code */
@@ -32,6 +48,15 @@ export default class MatchInput {
     // Phaser can deliver one press twice, and the system repeats held keys.
     if (!action || this.held.includes(code)) return;
     this.held.push(code);
+    if (action === 'meter') {
+      this.toggleChoice();
+      return;
+    }
+    if (this.choice.open && action in CONTROLS.choiceKeys) {
+      this.spent.add(code);
+      this.pick(CONTROLS.choiceKeys[action]);
+      return;
+    }
     if (isMove(action)) {
       this.pendingMove = BITS[action];
       this.charge = 0;
@@ -52,15 +77,48 @@ export default class MatchInput {
   release(code) {
     const before = this.heldMove();
     this.held = this.held.filter((c) => c !== code);
+    this.spent.delete(code);
     if (this.heldMove() !== before) this.charge = 0;
   }
 
-  /** The move key pressed last among those held, as an action. */
+  /** The move key pressed last among those held and not spent, as an action. */
   heldMove() {
     return this.held
+      .filter((code) => !this.spent.has(code))
       .map((code) => CONTROLS.keys[code])
       .filter(isMove)
       .at(-1);
+  }
+
+  /** Opens the choice if the board allows it, or closes it. */
+  toggleChoice() {
+    if (this.choice.open) this.closeChoice();
+    else this.openChoice();
+  }
+
+  openChoice() {
+    if (this.choice.open || !this.rules.canOpen()) return;
+    this.choice = { open: true, ticks: CONTROLS.choiceTicks, picked: 0 };
+    // Keys already down don't act or pick until pressed again.
+    for (const code of this.held) if (CONTROLS.keys[code] !== 'drop') this.spent.add(code);
+    this.pendingMove = 0;
+    this.pendingTurns = 0;
+    this.rules.onOpen();
+  }
+
+  /** Closes the choice without firing. */
+  closeChoice() {
+    this.choice = { open: false, ticks: 0, picked: this.choice.picked };
+  }
+
+  /**
+   * Picks an option of the open choice: its bit goes out on the next tick and the choice closes. Rinse
+   * is ignored while it can't be picked.
+   * @param {'rinse' | 'bomb'} option
+   */
+  pick(option) {
+    if (!this.choice.open || (option === 'rinse' && !this.rules.canRinse())) return;
+    this.choice = { open: false, ticks: 0, picked: PICKS[option] };
   }
 
   /** The mask for the next tick. Call once per tick. */
@@ -75,6 +133,13 @@ export default class MatchInput {
     }
     this.pendingMove = 0;
     this.pendingTurns = 0;
+    const { choice } = this;
+    if (choice.open) {
+      mask &= ~MOVES;
+      if (--choice.ticks <= 0) this.closeChoice();
+    }
+    mask |= choice.picked;
+    this.choice.picked = 0;
     return mask;
   }
 }

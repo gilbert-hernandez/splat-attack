@@ -48,10 +48,17 @@ export const LAYOUT = {
         // Pending gunk icons, in a strip above each board's frame.
         pendingPlayer: { x: 64, y: 64, width: 224, height: 24 },
         pendingRival: { x: 672, y: 64, width: 224, height: 24 },
+        // Meters, centered under each board's frame.
+        meterPlayer: { x: 76, y: 500, width: 200, height: 16 },
+        meterRival: { x: 684, y: 500, width: 200, height: 16 },
+        // The meter choice's panel (its center), over the top of the player's board.
+        choice: { x: 176, y: 140 },
       },
       endless: {
         player: { x: 368, y: 100, scale: 1, next: { x: 608, y: 100, spacing: 104 } },
         gameOver: { x: 480, y: 270 },
+        meterPlayer: { x: 380, y: 500, width: 200, height: 16 },
+        choice: { x: 480, y: 140 },
       },
       debugHint: { x: 480, bottom: 12 },
       // In the outer 120 px of each side.
@@ -91,6 +98,9 @@ export const LAYOUT = {
           gameOver: { x: 248, y: 270 },
           pendingPlayer: { x: 136, y: 64, width: 224, height: 24 },
           pendingRival: { x: 600, y: 64, width: 224, height: 24 },
+          meterPlayer: { x: 148, y: 500, width: 200, height: 16 },
+          meterRival: { x: 612, y: 500, width: 200, height: 16 },
+          choice: { x: 248, y: 140 },
         },
       },
     },
@@ -138,11 +148,17 @@ export const LAYOUT = {
         gameOver: { x: 120, y: 284 },
         // The player's in the reserved gunk area; the rival's under its board, beside the meter.
         pendingPlayer: { x: 8, y: 58, width: 344, height: 24 },
-        pendingRival: { x: 244, y: 488, width: 112, height: 24 },
+        pendingRival: { x: 244, y: 488, width: 112, height: 16 },
+        // The player's meter fills the reserved meter area; the rival's is a thin bar under its pending gunk.
+        meterPlayer: { x: 8, y: 488, width: 200, height: 16 },
+        meterRival: { x: 244, y: 506, width: 112, height: 6 },
+        choice: { x: 120, y: 130 },
       },
       endless: {
         player: { x: 32, y: 92, scale: 1, next: { x: 272, y: 84, spacing: 100 } },
         gameOver: { x: 144, y: 284 },
+        meterPlayer: { x: 8, y: 488, width: 200, height: 16 },
+        choice: { x: 144, y: 130 },
       },
       debugHint: { x: 180, bottom: 24, wrap: 344 },
       // Space kept free. `hud` holds the ui texts; extra screen height goes to `touch`.

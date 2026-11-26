@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { createSparring, sparringInput } from '../ai/sparring.js';
-import { CONTROLS, DEBUG, DISPLAY, FLOW } from '../config/index.js';
+import { CONTROLS, DEBUG, DISPLAY, FLOW, RULES, VIEW } from '../config/index.js';
 import DebugKeys from '../debug/debugKeys.js';
 import { onLayout } from '../layout/manager.js';
 import TouchGestures from '../match/gestures.js';
@@ -9,6 +9,7 @@ import MatchRunner from '../match/runner.js';
 import MatchStats from '../match/stats.js';
 import TouchButton from '../ui/TouchButton.js';
 import BoardView from '../view/BoardView.js';
+import MeterView from '../view/MeterView.js';
 import PendingView from '../view/PendingView.js';
 import { addSceneLabel } from './sceneLabel.js';
 
@@ -32,6 +33,8 @@ export default class MatchScene extends Phaser.Scene {
     this.view = new BoardView(this, { frameKey: 'board_frame_player', preview: true });
     this.rivalView = solo ? null : new BoardView(this, { frameKey: 'board_frame_rival' });
     this.pending = solo ? null : [new PendingView(this), new PendingView(this)];
+    this.meters = solo ? [new MeterView(this)] : [new MeterView(this), new MeterView(this)];
+    this.makeChoicePanel();
     this.gameOverText = this.add
       .text(0, 0, FLOW.endMessages.over, {
         fontFamily: FLOW.fontFamily,
@@ -44,8 +47,14 @@ export default class MatchScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setDepth(100);
-    this.keys = new MatchInput();
     this.touch = new TouchGestures();
+    // The choice needs the player's live board, read when asked.
+    this.keys = new MatchInput({
+      canOpen: () => this.meterFull(),
+      canRinse: () => this.runner.state.pending > 0,
+      // A finger that was dragging stops moving the pair, and doesn't snap it when the choice closes.
+      onOpen: () => this.touch.releaseAll(),
+    });
     this.makeButtons();
     this.debug = DEBUG.enabled ? new DebugKeys(this) : null;
     this.begin(crypto.getRandomValues(new Uint32Array(1))[0]);
@@ -55,23 +64,66 @@ export default class MatchScene extends Phaser.Scene {
     this.scene.launch('UI');
   }
 
-  /** Rotate and pause buttons for touch. The meter's slot stays empty until SA-9. */
+  /** Rotate, meter and pause buttons for touch. While the meter choice is open, the rotate buttons pick. */
   makeButtons() {
-    const turn = (action) => () => {
-      if (!this.pauseOpen) this.keys.turn(action);
+    const turn = (action, option) => () => {
+      if (this.pauseOpen) return;
+      if (this.keys.choice.open) this.keys.pick(option);
+      else this.keys.turn(action);
     };
     this.buttons = {
-      ccw: new TouchButton(this, 'ccw', { onPress: turn('ccw') }),
-      cw: new TouchButton(this, 'cw', { onPress: turn('cw') }),
+      ccw: new TouchButton(this, 'ccw', { onPress: turn('ccw', 'rinse') }),
+      meter: new TouchButton(this, 'meter', {
+        onPress: () => {
+          if (!this.pauseOpen) this.keys.toggleChoice();
+        },
+      }),
+      cw: new TouchButton(this, 'cw', { onPress: turn('cw', 'bomb') }),
       pause: new TouchButton(this, 'pause', { onRelease: () => this.openPause() }, true),
     };
     for (const button of Object.values(this.buttons)) button.setDepth(50);
+    this.showButtons();
+  }
+
+  /** The meter choice's panel: Rinse on the left, Bomb on the right, over the player's board. */
+  makeChoicePanel() {
+    const style = { fontFamily: FLOW.fontFamily, fontSize: '18px', fontStyle: 'bold', color: FLOW.textColor };
+    this.choiceTexts = [0, 1].map((side) => this.add.text(0, 0, '', style).setOrigin(side === 0 ? 1 : 0, 0.5));
+    this.choicePanel = this.add
+      .container(0, 0, [
+        this.add.rectangle(0, 0, 200, 36, VIEW.choicePanelColor, VIEW.choicePanelAlpha),
+        ...this.choiceTexts,
+      ])
+      .setDepth(VIEW.choiceDepth)
+      .setVisible(false);
+    this.choiceTexts[0].setX(-12);
+    this.choiceTexts[1].setX(12);
+  }
+
+  /** True while the player's live board can fire its meter. */
+  meterFull() {
+    return !this.runner.over && this.runner.state.meter === RULES.meter.max;
+  }
+
+  /** The buttons' icons and dimming for the choice and the meter. */
+  showButtons() {
+    const { ccw, cw, meter } = this.buttons;
+    const open = this.keys.choice.open;
+    const state = this.runner?.state;
+    ccw.setIcon(open ? 'rinse' : 'ccw');
+    cw.setIcon(open ? 'bomb' : 'cw');
+    ccw.setDim(open && !(state?.pending > 0));
+    meter.setDim(!open && !(state && this.meterFull()));
   }
 
   /** @param {import('../layout/layout.js').Layout} layout */
   place({ match, mode }, rotated) {
-    const { player, gameOver } = match[this.mode];
+    const { player, gameOver, meterPlayer, choice } = match[this.mode];
     this.view.place(player);
+    this.meters[0].place(meterPlayer);
+    this.meters[1]?.place(match.ladder.meterRival);
+    this.choicePanel.setPosition(choice.x, choice.y);
+    FLOW.choiceLabels[mode].forEach((label, i) => this.choiceTexts[i].setText(label));
     this.rivalView?.place(match.ladder.rival);
     this.pending?.[0].place(match.ladder.pendingPlayer);
     this.pending?.[1].place(match.ladder.pendingRival);
@@ -163,13 +215,18 @@ export default class MatchScene extends Phaser.Scene {
     const rival = this.rivalView ? createSparring() : null;
     this.runner = new MatchRunner({
       seed,
-      readInput: () => this.keys.next() | this.touch.next(),
+      // While the choice is open, gestures pass soft drop only.
+      readInput: () => {
+        const moves = !this.keys.choice.open;
+        return this.keys.next() | this.touch.next(moves);
+      },
       readRivalInput: rival ? (board) => sparringInput(rival, board) : undefined,
       onTick: (state, events, rivalEvents) => this.tick(state, events, rivalEvents),
     });
     this.view.show(this.runner.state);
     this.rivalView?.show(this.runner.rival);
     this.showPending();
+    this.showMeters();
   }
 
   tick(state, events, rivalEvents) {
@@ -177,6 +234,8 @@ export default class MatchScene extends Phaser.Scene {
     if (rivalEvents) this.rivalView.tick(this.runner.rival, rivalEvents);
     this.stats.add(events);
     if (events.some(({ type }) => type === 'lock')) this.touch.lock();
+    // The meter emptied (fired, or the match ended): nothing left to choose.
+    if (this.keys.choice.open && !this.meterFull()) this.keys.closeChoice();
     if (!this.runner.over) return;
     this.gameOverText.setText(FLOW.endMessages[this.runner.outcome ?? 'over']).setVisible(true);
     // Counted in ticks, so pausing stops it.
@@ -190,6 +249,19 @@ export default class MatchScene extends Phaser.Scene {
     this.view.draw();
     this.rivalView?.draw();
     this.showPending();
+    this.showButtons();
+    this.showMeters();
+  }
+
+  /** Both meters, and the choice's panel and Bomb target while it is open. */
+  showMeters() {
+    const { state, rival } = this.runner;
+    this.meters[0].show(state.meter);
+    this.meters[1]?.show(rival.meter);
+    const open = this.keys.choice.open;
+    this.choicePanel.setVisible(open);
+    this.choiceTexts[0].setAlpha(state.pending > 0 ? 1 : FLOW.dimAlpha);
+    this.view.setTarget(open);
   }
 
   showPending() {

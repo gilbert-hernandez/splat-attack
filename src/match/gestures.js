@@ -93,8 +93,16 @@ export default class TouchGestures {
     if (this.press.kind === 'drop') this.press.kind = 'done';
   }
 
-  /** The mask for the next tick. Call once per tick. */
-  next() {
+  /**
+   * The mask for the next tick. Call once per tick.
+   * @param {boolean} [moves] false while moves and rotations are held back (the meter choice is open):
+   *   queued moves and taps are dropped, and only soft drop passes
+   */
+  next(moves = true) {
+    if (!moves) {
+      this.queue = 0;
+      this.pendingTap = false;
+    }
     let mask = 0;
     if (this.press) this.press.ticks++;
     if (this.press?.kind === 'drop') mask |= INPUT.SOFT_DROP;

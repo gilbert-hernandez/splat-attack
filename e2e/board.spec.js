@@ -226,7 +226,7 @@ const DIR = new URL('../tests/core/replays/', import.meta.url);
 const NAMES = [...COLOR, 'whole', 'cracked'];
 for (const file of readdirSync(DIR)) {
   const { replay, expected } = JSON.parse(readFileSync(new URL(file, DIR), 'utf8'));
-  const versus = replay.format === 2;
+  const versus = replay.format === 3;
   test(`plays ${file} through the view`, async ({ page }) => {
     await openGame(page);
     await startStopped(page, versus ? 'ladder' : 'endless', replay.seed);
@@ -239,6 +239,7 @@ for (const file of readdirSync(DIR)) {
         const checkpoints = [];
         let longestChain = 0;
         const gunk = { cracks: 0, clears: 0 };
+        const meter = { rinses: 0, bombs: 0 };
         const { onTick } = runner;
         runner.onTick = (state, events, rivalEvents) => {
           onTick(state, events, rivalEvents);
@@ -246,6 +247,8 @@ for (const file of readdirSync(DIR)) {
           rivalView?.draw();
           for (const event of events) if (event.type === 'splat') longestChain = Math.max(longestChain, event.chain);
           for (const event of [...events, ...(rivalEvents ?? [])]) {
+            if (event.type === 'rinse') meter.rinses++;
+            if (event.type === 'bomb') meter.bombs++;
             if (event.type !== 'gunkHit') continue;
             gunk.cracks += event.cracked.length;
             gunk.clears += event.cleared.length;
@@ -254,12 +257,21 @@ for (const file of readdirSync(DIR)) {
           if (whole.tick % 600 === 0) checkpoints.push(hashState(whole));
         };
         for (const [mask, ticks] of inputs) {
-          runner.readRivalInput = () => mask >> 5;
-          runner.advance(ticks, mask & 31);
+          runner.readRivalInput = () => mask >> 7;
+          runner.advance(ticks, mask & 127);
         }
         const whole = runner.match ?? runner.state;
         const { phase, chain, score } = runner.state;
-        const result = { ticks: whole.tick, phase, chain, score, longestChain, hash: hashState(whole), checkpoints };
+        const result = {
+          ticks: whole.tick,
+          phase,
+          chain,
+          score,
+          longestChain,
+          ...meter,
+          hash: hashState(whole),
+          checkpoints,
+        };
         return isVersus ? { ...result, outcome: runner.outcome, ...gunk } : result;
       },
       [replay.inputs, versus],

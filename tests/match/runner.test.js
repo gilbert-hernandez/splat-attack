@@ -3,6 +3,8 @@ import { CLOCK } from '../../src/config/input.js';
 import { hashState, playReplay } from '../../src/core/replay.js';
 import { nextInt, seedRng } from '../../src/core/rng.js';
 import MatchRunner from '../../src/match/runner.js';
+import MatchInput from '../../src/match/input.js';
+import { RULES } from '../../src/config/rules.js';
 import { createSparring, sparringInput } from '../../src/ai/sparring.js';
 
 const idle = () => 0;
@@ -121,7 +123,7 @@ describe('versus runner', () => {
     for (let i = 0; i < 2000 && !runner.over; i++) runner.update(1000 / 60);
     expect(runner.over).toBe(true);
     expect(runner.outcome).toBe('loss');
-    expect(runner.replay.format).toBe(2);
+    expect(runner.replay.format).toBe(3);
     const played = playReplay(JSON.parse(JSON.stringify(runner.replay)));
     expect(hashState(played)).toBe(hashState(runner.match));
   });
@@ -144,5 +146,65 @@ describe('versus runner', () => {
   it('is solo without a rival', () => {
     const runner = new MatchRunner({ seed: 1, readInput: idle });
     expect([runner.match, runner.rival, runner.outcome, runner.replay.format]).toEqual([null, null, null, 1]);
+  });
+});
+
+describe('meter choice in a running match', () => {
+  /** A Ladder-like runner whose player input comes from MatchInput, choice included. */
+  function choosingRunner() {
+    let runner = null;
+    const keys = new MatchInput({ canOpen: () => runner.state.meter === RULES.meter.max });
+    const rival = createSparring();
+    runner = new MatchRunner({
+      seed: 3,
+      readInput: () => keys.next(),
+      readRivalInput: (board) => sparringInput(rival, board),
+    });
+    return { runner, keys };
+  }
+
+  it('keeps time running while the choice is open, and the pair falls and locks', () => {
+    const { runner, keys } = choosingRunner();
+    runner.state.meter = RULES.meter.max;
+    keys.press('Space');
+    expect(keys.choice.open).toBe(true);
+    const pairs = runner.state.pairs;
+    const row = runner.state.pair.row;
+    for (let i = 0; i < 60; i++) runner.update(1000 / 60);
+    expect(runner.state.tick).toBe(60);
+    expect(runner.state.pair.row).toBeGreaterThan(row);
+    // Held open past its time: it closed, and play went on to lock the pair.
+    keys.openChoice();
+    for (let i = 0; i < 600; i++) runner.update(1000 / 60);
+    expect(runner.state.pairs).toBeGreaterThan(pairs);
+  });
+
+  it('replays a Bomb fired by choice to the same state', { timeout: 30000 }, () => {
+    // The player is a sparring bot that never fires the meter itself; once its meter is full, the
+    // choice opens with Space and D picks Bomb, as a person would.
+    let runner = null;
+    const keys = new MatchInput({ canOpen: () => runner.state.meter === RULES.meter.max });
+    const player = createSparring({ actEvery: 2, dropDelay: 4, rinseAt: Infinity, bombRows: 0 });
+    const rival = createSparring();
+    let bombs = 0;
+    runner = new MatchRunner({
+      seed: 8,
+      readInput: () => {
+        if (runner.state.meter === RULES.meter.max && runner.state.phase === 'falling' && !keys.choice.open) {
+          keys.press('Space');
+          keys.release('Space');
+          keys.press('KeyD');
+          keys.release('KeyD');
+        }
+        return keys.next() | sparringInput(player, runner.state);
+      },
+      readRivalInput: (board) => sparringInput(rival, board),
+      onTick: (_state, events) => (bombs += events.filter((e) => e.type === 'bomb').length),
+    });
+    while (bombs === 0 && !runner.over) runner.advance(1);
+    expect(bombs).toBe(1);
+    runner.advance(120);
+    const played = playReplay(JSON.parse(JSON.stringify(runner.replay)));
+    expect(hashState(played)).toBe(hashState(runner.match));
   });
 });

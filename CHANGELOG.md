@@ -4,6 +4,23 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.1.7] - 2026-11-26
+
+### Added
+
+- **Paint meter** (SA-9): splats fill a meter on each board, from their blobs and stain matches times the chain step, up to 100. A four fills 16. All values are in `RULES.meter`.
+- **Rinse** (SA-9): a full meter removes all of your pending gunk at once. It is refused while nothing is pending, and the meter stays full.
+- **Bomb** (SA-9): a full meter clears the 3×3 area around the top cell of your pair's column (blobs, gunk and cracked gunk) and stains it with the pivot's color. Blobs above fall at once while your pair keeps falling, and any groups they form splat with your next lock. Fired during a chain, the Bomb waits for the next pair.
+- **Limits and score** (SA-9): after firing, the meter doesn't fill again for 2 pairs, however long you wait. Firing adds and costs no points, and a Bomb's cells score nothing and send nothing.
+- **Meter choice** (SA-9): Space or the on-screen meter button opens a quick choice while the meter is full. The left keys or button pick Rinse and the right ones pick Bomb, and picking never moves or turns the pair. Time keeps running, and the choice closes by itself after 2 seconds, on pause and on rotation. A panel names the options, and the Bomb's target is outlined.
+- **Meter display** (SA-9): each board shows its meter, tinted when full: under each board in landscape, and in the meter area and under the rival's pending gunk in portrait.
+- **Sparring rival** (SA-9): it now Rinses when 7 or more gunk is pending, and Bombs when its stack nears the top.
+- **Debug** (SA-9): `M` and `N` fill your or the rival's meter, and `B` adds a Bomb board.
+
+### Changed
+
+- **Replays:** versus replays move to format 3, with 7 input bits a side for the meter. Format 2 files are rejected. The stored versus replay was regenerated and now includes a Rinse and two Bombs. Every stored hash changed because the board state gained meter fields. The Endless replays' scores are unchanged (5,860, 3,895 and 240).
+
 ## [0.1.6] - 2026-11-25
 
 ### Added

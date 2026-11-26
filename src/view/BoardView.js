@@ -1,9 +1,10 @@
 import { COLORS } from '../assets/manifest.js';
 import { BOARD, FLOW, RULES, VIEW } from '../config/index.js';
+import { bombArea } from '../core/meter.js';
 import BoardModel from './boardModel.js';
 import SpritePool from './SpritePool.js';
 
-const DEPTH = { fill: 0, stains: 0.5, ghost: 1, blobs: 2, bridges: 3, pair: 4, frame: 5, next: 6 };
+const DEPTH = { fill: 0, stains: 0.5, ghost: 1, blobs: 2, bridges: 3, target: 3.5, pair: 4, frame: 5, next: 6 };
 const name = (color) => COLORS[color - 1].name;
 
 /** Draws one board. Without a state it's an empty board. */
@@ -35,6 +36,40 @@ export default class BoardView {
     };
     this.next = { x: 0, y: 0, spacing: 0 };
     this.nextBoxes = preview ? this.addNextBoxes() : [];
+    /** The Bomb target's outline, shown while the meter choice is open. */
+    this.target = scene.add.graphics().setDepth(DEPTH.target);
+    this.showTarget = false;
+  }
+
+  /**
+   * Shows or hides the outline of where a Bomb would go off.
+   * @param {boolean} shown
+   */
+  setTarget(shown) {
+    if (shown === this.showTarget) return;
+    this.showTarget = shown;
+    this.draw();
+  }
+
+  /** Outlines the Bomb area, read from the engine, or clears it. */
+  drawTarget() {
+    this.target.clear();
+    const area = this.showTarget && this.model ? bombArea(this.model.state) : null;
+    if (!area) return;
+    const cols = area.cells.map((c) => c.col);
+    const rows = area.cells.map((c) => c.row);
+    const left = Math.min(...cols);
+    const top = Math.min(...rows);
+    const size = BOARD.cell * this.scale;
+    const { width, color, alpha } = VIEW.bombOutline;
+    this.target
+      .lineStyle(width, color, alpha)
+      .strokeRect(
+        this.left(left),
+        this.top(top),
+        (Math.max(...cols) - left + 1) * size,
+        (Math.max(...rows) - top + 1) * size,
+      );
   }
 
   addNextBoxes() {
@@ -91,6 +126,7 @@ export default class BoardView {
     for (const half of model.drawPair()) this.placeBlob(pools.pair, half);
     if (this.nextBoxes.length > 0) model.drawNext().forEach((pair, i) => this.placeNext(pair, i));
     for (const pool of Object.values(pools)) pool.end();
+    this.drawTarget();
   }
 
   left(col) {

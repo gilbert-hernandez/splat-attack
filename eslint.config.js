@@ -48,6 +48,7 @@ const readers = [
   'isGrounded',
   'otherCell',
   'landingCells',
+  'bombArea',
 ];
 const viewRules = {
   'no-restricted-imports': [

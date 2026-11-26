@@ -36,7 +36,7 @@ function drawnStains(model) {
 
 /** Runs a replay through a model per board on frozen states, checking them at every quiet tick. */
 function check(replay) {
-  const versus = replay.format === 2;
+  const versus = replay.format === 3;
   const first = versus ? createVersus(replay.seed).boards : [createState(replay.seed)];
   const boards = first.map((state) => ({ model: new BoardModel(snapshot(state)), quiet: 0 }));
   let longest = 0;
@@ -67,7 +67,9 @@ function checkTick(board, state, events) {
   expect(drawnStains(model)).toEqual(state.stains);
   if (state.phase === 'falling' || state.phase === 'over') {
     board.quiet++;
-    if (board.quiet % 7 === 1 || state.phase === 'over') expect(drawnGrid(model)).toEqual(state.grid);
+    // A Bomb's blobs fall while the pair does, so only compare once they've landed.
+    const still = ![...model.blobs.values()].some((b) => model.isFalling(b));
+    if (still && (board.quiet % 7 === 1 || state.phase === 'over')) expect(drawnGrid(model)).toEqual(state.grid);
   }
 }
 
@@ -110,16 +112,30 @@ describe('board model', () => {
     for (let seed = 1; seed <= 10; seed++) check(randomReplay(seed));
   });
 
-  it('matches both grids, gunk included, through sparring matches', { timeout: 60000 }, () => {
+  it('matches both grids, gunk and meters included, through sparring matches', { timeout: 60000 }, () => {
     let gunk = 0;
+    let meter = 0;
     for (let seed = 1; seed <= 3; seed++) {
       const replay = sparringReplay(seed);
       check(replay);
       playReplay(replay, (_match, events) => {
         for (const e of events.flat()) if (e.type === 'drop' || e.type === 'gunkHit') gunk++;
+        for (const e of events.flat()) if (e.type === 'bomb' || e.type === 'rinse') meter++;
       });
     }
     expect(gunk).toBeGreaterThan(0);
+    expect(meter).toBeGreaterThan(0);
+  });
+
+  it('draws a Bomb: its cells gone and stained at once, the blobs above landed within the settle time', () => {
+    const state = stateWith('....p..\n....b..\n...gy..\n..#rb..\n..yyg..', { col: 3 });
+    state.meter = RULES.meter.max;
+    const model = new BoardModel(state);
+    model.tick(state, step(state, INPUT.BOMB));
+    expect(drawnStains(model)).toEqual(state.stains);
+    expect(model.drawBlobs().some((b) => b.color === GUNK)).toBe(false);
+    for (let i = 0; i < RULES.settleTicks; i++) model.tick(state, step(state));
+    expect(drawnGrid(model)).toEqual(state.grid);
   });
 
   it('drops gunk in from above the top edge', () => {

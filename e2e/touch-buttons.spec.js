@@ -6,6 +6,7 @@ import {
   inputMode,
   matchState,
   openGame,
+  setState,
   startStopped,
   toPage,
   useTouch,
@@ -307,3 +308,42 @@ test('a match played with buttons and gestures replays to the same hash', async 
   await advance(page, 60, 0);
   await waitForScene(page, 'Result');
 });
+
+// The meter choice by touch: the rotate buttons become Rinse and Bomb, and picking never rotates.
+for (const size of [PORTRAIT, LANDSCAPE]) {
+  test(`the meter button opens the choice and Bomb fires at ${size.width}x${size.height}`, async ({ page }) => {
+    const { problems, finger } = await open(page, size, 'ladder');
+    const meter = await button(page, 'meter');
+    expect(meter).toMatchObject({ visible: true, enabled: true });
+
+    // Not full: nothing opens.
+    await finger.press(meter.x, meter.y);
+    await finger.lift();
+    expect(
+      await page.evaluate(() => /** @type {any} */ (window.__GAME__.scene.getScene('Match')).keys.choice.open),
+    ).toBe(false);
+
+    await setState(page, { meter: 100 });
+    await finger.press(meter.x, meter.y);
+    await finger.lift();
+    const icons = () =>
+      page.evaluate(() => {
+        const { buttons, keys } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+        return { open: keys.choice.open, ccw: buttons.ccw.iconName, cw: buttons.cw.iconName };
+      });
+    await waitFrames(page);
+    expect(await icons()).toEqual({ open: true, ccw: 'rinse', cw: 'bomb' });
+
+    const before = (await pair(page)).orientation;
+    const cw = await button(page, 'cw');
+    await finger.press(cw.x, cw.y);
+    await finger.lift();
+    await advance(page, 1);
+    const state = await matchState(page);
+    expect(state.meter).toBe(0);
+    expect(state.pair.orientation).toBe(before);
+    await waitFrames(page);
+    expect(await icons()).toEqual({ open: false, ccw: 'ccw', cw: 'cw' });
+    expect(problems).toEqual([]);
+  });
+}

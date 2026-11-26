@@ -34,7 +34,7 @@ function rects(layout, mode) {
   const out = { ...areas };
   for (const [name, r] of Object.entries(buttons)) out[`button ${name}`] = r;
   for (const [name, board] of Object.entries(boards)) {
-    if (name === 'gameOver') continue;
+    if (name === 'gameOver' || name === 'choice') continue;
     if ('width' in board) {
       out[name] = board;
       continue;
@@ -68,8 +68,9 @@ function expectApart(layout, mode, buttons = true) {
     for (const [other, o] of all) {
       if (other === name || (other === 'touch' && BELOW.includes(name)) || (name === 'touch' && BELOW.includes(other)))
         continue;
-      // The player's pending gunk sits in the area reserved for it.
+      // The player's pending gunk and meter sit in the areas reserved for them.
       if ([name, other].includes('gunk') && [name, other].includes('pendingPlayer')) continue;
+      if ([name, other].includes('meter') && [name, other].includes('meterPlayer')) continue;
       if (!buttons && [name, other].some((n) => n.startsWith('button '))) continue;
       expect(apart(r, o), `${name} and ${other}`).toBe(true);
     }
@@ -81,8 +82,9 @@ describe.each([640, 700, 780])('portrait match at height %i', (height) => {
   it.each(['ladder', 'endless'])('%s: nothing overlaps or leaves the screen', (mode) => {
     for (const input of ['keyboard', 'touch']) {
       const all = expectApart(portrait(height, input), mode);
-      expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 14 : 11);
+      expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 16 : 12);
       if (mode === 'ladder') expect(inside(all.pendingPlayer, all.gunk)).toBe(true);
+      expect(all.meterPlayer).toEqual(all.meter);
     }
   });
 
@@ -121,7 +123,7 @@ it('layouts never change the configuration', () => {
 describe('landscape match in touch mode', () => {
   it.each(['ladder', 'endless'])('%s: nothing overlaps or leaves the screen', (mode) => {
     const all = expectApart(landscape('touch'), mode);
-    expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 10 : 7);
+    expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 12 : 8);
   });
 });
 
@@ -239,5 +241,36 @@ describe('text is readable on the smallest windows', () => {
   it('keyboard landscape keeps its sizes', () => {
     const { title, ui, result } = landscape('keyboard');
     expect([title.hint.size, title.start.size, ui.score.size, result.stats.size]).toEqual([14, 18, 20, 16]);
+  });
+});
+
+describe('meter places', () => {
+  it.each(['keyboard', 'touch'])('sit right below their own boards in landscape %s mode', (input) => {
+    for (const mode of ['ladder', 'endless']) {
+      const all = expectApart(landscape(input), mode, input === 'touch');
+      const pairs = mode === 'ladder' ? [['meterPlayer', 'player'], ['meterRival', 'rival']] : [['meterPlayer', 'player']]; // prettier-ignore
+      for (const [meter, board] of pairs) {
+        const b = all[board];
+        const m = all[meter];
+        expect(m.x + m.width / 2, meter).toBe(b.x + b.width / 2);
+        expect(m.y).toBeGreaterThanOrEqual(b.y + b.height);
+        expect(m.y - (b.y + b.height)).toBeLessThanOrEqual(8);
+      }
+      expect(all.meterPlayer.y + all.meterPlayer.height).toBeLessThan(landscape().match.debugHint.y - 6);
+    }
+  });
+
+  it('put the choice panel over the player board, inside the screen', () => {
+    for (const layout of [landscape(), landscape('touch'), portrait(640), portrait(780)]) {
+      const { width, height } = layout.screen;
+      for (const mode of ['ladder', 'endless']) {
+        const { choice, player } = layout.match[mode];
+        const right = player.x + BOARD.columns * BOARD.cell * player.scale;
+        expect(choice.x).toBe((player.x + right) / 2);
+        expect(choice.y).toBeGreaterThan(player.y);
+        expect(choice.y).toBeLessThan(player.y + 100);
+        expect(choice.x > 0 && choice.x < width && choice.y < height).toBe(true);
+      }
+    }
   });
 });

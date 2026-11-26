@@ -47,10 +47,21 @@ export const RULES = {
     // The most gunk one drop puts on a board; the rest waits for the next drop.
     maxDrop: 28,
   },
-  // The sparring rival (src/ai/sparring.js) until the CPU rivals arrive: at most one move or rotation
-  // per actEvery ticks, then dropDelay ticks in place before it soft-drops.
+  // The paint meter. Each chain step k adds (blobFill per blob + stainFill per stain match) * k, up to
+  // max. A full meter fires Rinse or Bomb; after firing it doesn't fill until refillPairs pairs spawn.
+  meter: {
+    max: 100,
+    blobFill: 4,
+    stainFill: 2,
+    refillPairs: 2,
+  },
+  // The sparring rival (src/ai/sparring.js) until the CPU rivals arrive: at most one move, rotation or
+  // meter use per actEvery ticks, then dropDelay ticks in place before it soft-drops. With a full meter
+  // it Rinses once rinseAt gunk is pending, or else Bombs when its stack is within bombRows of the top.
   sparring: {
     actEvery: 6,
     dropDelay: 30,
+    rinseAt: 7,
+    bombRows: 4,
   },
 };

@@ -14,7 +14,7 @@ export const FLOW = {
   // The title's controls, for the input mode.
   hints: {
     keyboard: 'A/D or ←/→ move · S or ↓ drop · Q/E or Z/X rotate · Space meter · Esc pause',
-    touch: 'Drag to move · Tap to rotate · Drag down to drop · Buttons rotate and pause',
+    touch: 'Drag to move · Tap to rotate · Drag down to drop · Buttons rotate, fire the meter and pause',
   },
   modes: { ladder: 'LADDER', endless: 'ENDLESS' },
   // Shown over the player's board when a match ends: Endless always tops out, Ladder by outcome.
@@ -22,8 +22,12 @@ export const FLOW = {
   // The Ladder result's heading by outcome.
   outcomes: { win: 'WIN', loss: 'LOSS', draw: 'DRAW' },
   // Match buttons: the symbol shown while an icon's art is missing, and tints for the placeholder button.
-  touchSymbols: { cw: '↻', ccw: '↺', pause: 'II', meter: '★' },
+  touchSymbols: { cw: '↻', ccw: '↺', pause: 'II', meter: '★', rinse: 'R', bomb: 'B' },
   touchTints: { normal: 0x4c4670, pressed: 0x7d6fc4 },
   // An icon without a button behind it dims while pressed.
   pressedAlpha: 0.6,
+  // The meter choice's panel: left and right options by input mode.
+  choiceLabels: { keyboard: ['← RINSE', 'BOMB →'], touch: ['RINSE', 'BOMB'] },
+  // A button's icon while it can't act: the meter button with the meter not full, Rinse with no gunk.
+  dimAlpha: 0.35,
 };

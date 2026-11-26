@@ -37,6 +37,8 @@ export default class DebugKeys {
     } else if (action === 'fast') runner.rate = runner.rate === 1 ? DEBUG.fastRate : 1;
     else if (action === 'gunkPlayer') this.sendGunk(runner.state);
     else if (action === 'gunkRival' && runner.rival) this.sendGunk(runner.rival);
+    else if (action === 'meterPlayer') this.fillMeter(runner.state);
+    else if (action === 'meterRival' && runner.rival) this.fillMeter(runner.rival);
     else if (action === 'win' && runner.match) this.forceEnd(1);
     else if (action === 'end') this.forceEnd(0);
   }
@@ -60,7 +62,7 @@ export default class DebugKeys {
     this.board = (this.board + 1) % BOARDS.length;
     state.grid = parseBoard(text);
     state.stains = parseStains(stains);
-    Object.assign(state, { chain: 0, chainPoints: 0, power: 0, dropped: false, wait: 0 });
+    Object.assign(state, { chain: 0, chainPoints: 0, power: 0, dropped: false, wait: 0, armed: false });
     // The board's pair goes in front of the queue, so the preview stays as it was.
     state.queue.unshift([...pair]);
     spawn(state);
@@ -74,6 +76,14 @@ export default class DebugKeys {
     const { runner } = this.match;
     if (runner.over) return;
     board.pending += RULES.columns;
+    runner.dropReplay();
+  }
+
+  /** Fills a board's meter and clears its refill limit. */
+  fillMeter(board) {
+    const { runner } = this.match;
+    if (runner.over) return;
+    Object.assign(board, { meter: RULES.meter.max, meterLock: 0 });
     runner.dropReplay();
   }
 

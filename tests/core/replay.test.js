@@ -1,10 +1,12 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { firstDifference, replayResult } from '../../scripts/replayResult.js';
-import { createState, step } from '../../src/core/engine.js';
+import { RULES } from '../../src/config/rules.js';
+import { INPUT, createState, step } from '../../src/core/engine.js';
 import { createReplay, hashState, packInputs, playReplay, recordInput } from '../../src/core/replay.js';
 import { createVersus, stepVersus } from '../../src/core/versus.js';
 import { nextInt } from '../../src/core/rng.js';
+import { createSparring, sparringInput } from '../../src/ai/sparring.js';
 
 /** Records a match of random inputs to the end. */
 function recordRandom(seed) {
@@ -55,11 +57,12 @@ describe('recording and playback', () => {
 
   it.each([
     [null, 'format: undefined'],
-    [{ format: 3, seed: 1, inputs: [] }, 'format: 3'],
-    [{ format: 2, seed: 1, inputs: [[1024, 1]] }, 'invalid mask: 1024'],
+    [{ format: 2, seed: 1, inputs: [] }, 'format: 2'],
+    [{ format: 4, seed: 1, inputs: [] }, 'format: 4'],
+    [{ format: 3, seed: 1, inputs: [[16384, 1]] }, 'invalid mask: 16384'],
     [{ format: 1, seed: -1, inputs: [] }, 'got -1'],
     [{ format: 1, seed: 1 }, 'must be a list'],
-    [{ format: 1, seed: 1, inputs: [[0, 1], [32, 1]] }, 'input 1 has an invalid mask: 32'], // prettier-ignore
+    [{ format: 1, seed: 1, inputs: [[0, 1], [128, 1]] }, 'input 1 has an invalid mask: 128'], // prettier-ignore
     [{ format: 1, seed: 1, inputs: [[-1, 1]] }, 'invalid mask: -1'],
     [{ format: 1, seed: 1, inputs: [[1.5, 1]] }, 'invalid mask: 1.5'],
     [{ format: 1, seed: 1, inputs: [[0, 0]] }, 'invalid tick count: 0'],
@@ -78,8 +81,9 @@ describe('versus replays', () => {
     const match = createVersus(seed);
     let rng = seed + 91;
     while (match.outcome === null) {
-      const a = nextInt(rng, 32);
-      const b = nextInt(a.rng, 32);
+      // All seven bits a side, so both fire the meter.
+      const a = nextInt(rng, 128);
+      const b = nextInt(a.rng, 128);
       rng = b.rng;
       recordInput(replay, match, packInputs(a.value, b.value));
       stepVersus(match, a.value, b.value);
@@ -90,7 +94,7 @@ describe('versus replays', () => {
   it('gives the same match back after a JSON round trip', () => {
     for (let seed = 0; seed < 5; seed++) {
       const { replay, match } = recordVersus(seed);
-      expect(replay.format).toBe(2);
+      expect(replay.format).toBe(3);
       const played = playReplay(JSON.parse(JSON.stringify(replay)));
       expect(played).toEqual(match);
       expect(played.outcome).toBe(match.outcome);
@@ -98,10 +102,35 @@ describe('versus replays', () => {
     }
   });
 
+  it('gives back both meters when both sides fire Rinse and Bomb', () => {
+    const fired = new Set();
+    for (let seed = 1; seed <= 8 && fired.size < 4; seed++) {
+      const replay = createReplay(seed, true);
+      const match = createVersus(seed);
+      // Eager meter use: one side Bombs any stack, the other only Rinses, swapping each seed.
+      const bomber = { rinseAt: 1, bombRows: RULES.visibleRows };
+      const rinser = { rinseAt: 1, bombRows: 0 };
+      const [first, second] = seed % 2 ? [bomber, rinser] : [rinser, bomber];
+      const bots = [createSparring({ actEvery: 2, dropDelay: 4, ...first }), createSparring(second)];
+      while (match.outcome === null) {
+        const inputs = bots.map((bot, side) => sparringInput(bot, match.boards[side]));
+        recordInput(replay, match, packInputs(...inputs));
+        stepVersus(match, ...inputs).forEach((list, side) => {
+          for (const e of list) if (e.type === 'rinse' || e.type === 'bomb') fired.add(`${e.type} ${side}`);
+        });
+      }
+      const played = playReplay(JSON.parse(JSON.stringify(replay)));
+      expect(played.boards.map((b) => b.meter)).toEqual(match.boards.map((b) => b.meter));
+      expect(hashState(played)).toBe(hashState(match));
+    }
+    expect([...fired].sort()).toEqual(['bomb 0', 'bomb 1', 'rinse 0', 'rinse 1']);
+  });
+
   it('packs the player low and the rival high', () => {
     expect(packInputs(16, 0)).toBe(16);
-    expect(packInputs(0, 16)).toBe(512);
-    expect(packInputs(31, 31)).toBe(1023);
+    expect(packInputs(0, 16)).toBe(16 << 7);
+    expect(packInputs(127, 127)).toBe(16383);
+    expect(packInputs(INPUT.BOMB, INPUT.RINSE)).toBe(64 | (32 << 7));
   });
 
   it("passes both sides' events to onTick", () => {
@@ -175,9 +204,16 @@ describe('stored replays', () => {
   });
 
   it('cover a versus win with gunk cracked and cleared', () => {
-    const versus = stored.filter(({ replay }) => replay.format === 2).map((s) => s.expected);
+    const versus = stored.filter(({ replay }) => replay.format === 3).map((s) => s.expected);
     const won = versus.some((r) => r.outcome === 'win' && r.cracks > 0 && r.clears > 0);
     expect(won, 'run: npm run replays -- --generate').toBe(true);
+  });
+
+  it('cover Rinse and Bomb', () => {
+    const results = stored.map((s) => s.expected);
+    const hint = 'run: npm run replays -- --generate';
+    expect(results.some((r) => r.rinses > 0), hint).toBe(true); // prettier-ignore
+    expect(results.some((r) => r.bombs > 0), hint).toBe(true); // prettier-ignore
   });
 
   it('cover a stain match', () => {

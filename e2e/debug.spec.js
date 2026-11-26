@@ -38,15 +38,15 @@ test('B loads boards in turn and play continues', async ({ page }) => {
   await advance(page, 100, 16);
   const { queue } = await matchState(page);
   const counts = new Set();
-  // Every prepared board once (chain, top-out, stains, gunk, mid-game), so the next press wraps to chain.
-  for (let i = 0; i < 5; i++) {
+  // Every prepared board once (chain, top-out, stains, gunk, bomb, mid-game), so the next press wraps to chain.
+  for (let i = 0; i < 6; i++) {
     await press(page, 'KeyB');
     const state = await matchState(page);
     expect(state).toMatchObject({ phase: 'falling', queue, chain: 0, pair: { col: 3, row: 2 } });
     counts.add(state.grid.filter(Boolean).length);
     await advance(page, 1, 0);
   }
-  expect(counts.size).toBe(5);
+  expect(counts.size).toBe(6);
   expect((await runner(page)).hasReplay).toBe(false);
   const { pairs } = await matchState(page);
   await advance(page, 60, 16);
@@ -124,6 +124,31 @@ test('G and H send a row of gunk to each board, which drops by the normal rules'
   expect(problems).toEqual([]);
 });
 
+test('M and N fill each meter, and the Bomb board Bombs and splats its fallout', async ({ page }) => {
+  const problems = await openGame(page);
+  await startStopped(page, 'ladder');
+  await press(page, 'KeyN');
+  const meters = () =>
+    page.evaluate(() => {
+      const { runner } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+      return [runner.state.meter, runner.rival.meter, runner.replay === null];
+    });
+  expect(await meters()).toEqual([0, 100, true]);
+  // The bomb board is the fifth.
+  for (let i = 0; i < 5; i++) await press(page, 'KeyB');
+  await press(page, 'KeyM');
+  expect((await meters())[0]).toBe(100);
+  const before = (await matchState(page)).grid.filter(Boolean).length;
+  await advance(page, 1, 64);
+  const after = await matchState(page);
+  expect(after.meter).toBe(0);
+  expect(after.grid.filter(Boolean).length).toBe(before - 7);
+  const score = after.score;
+  await advance(page, 120, 16);
+  expect((await matchState(page)).score).toBeGreaterThan(score);
+  expect(problems).toEqual([]);
+});
+
 test('G in Endless gunks the player and H does nothing', async ({ page }) => {
   await openGame(page);
   await startStopped(page, 'endless');
@@ -159,7 +184,20 @@ test('debug keys do nothing while paused', async ({ page }) => {
   await startMatch(page, 'endless');
   await openPause(page);
   const before = await matchState(page);
-  for (const code of ['Digit1', 'Digit2', 'KeyB', 'KeyP', 'Period', 'KeyF', 'KeyG', 'KeyH', 'KeyW', 'KeyR']) {
+  for (const code of [
+    'Digit1',
+    'Digit2',
+    'KeyB',
+    'KeyP',
+    'Period',
+    'KeyF',
+    'KeyG',
+    'KeyH',
+    'KeyM',
+    'KeyN',
+    'KeyW',
+    'KeyR',
+  ]) {
     await press(page, code);
   }
   expect(await matchState(page)).toEqual(before);

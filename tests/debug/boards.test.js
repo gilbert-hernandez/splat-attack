@@ -64,3 +64,22 @@ describe('debug boards', () => {
     expect(state.phase).toBe('over');
   });
 });
+
+describe('bomb board', () => {
+  it('Bombs gunk and blobs, and its fallout splats when the pair locks in place', () => {
+    const state = start('bomb');
+    state.meter = 100;
+    const [bomb] = /** @type {any[]} */ (step(state, INPUT.BOMB));
+    expect(bomb.type).toBe('bomb');
+    const was = bomb.cells.map((c) => c.was);
+    expect(was).toContain(6);
+    expect(was).toContain(7);
+    expect(was.filter((v) => v >= 1 && v <= 5).length).toBeGreaterThan(0);
+    const { pairs } = state;
+    const splats = [];
+    while (state.pairs === pairs) splats.push(...step(state, INPUT.SOFT_DROP).filter((e) => e.type === 'splat'));
+    expect(splats).toHaveLength(1);
+    expect(splats[0].groups[0]).toMatchObject({ color: 1 });
+    expect(splats[0].groups[0].cells).toHaveLength(4);
+  });
+});

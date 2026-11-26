@@ -152,3 +152,114 @@ describe('rotate buttons', () => {
     expect(input.next()).toBe(0);
   });
 });
+
+describe('meter choice', () => {
+  const { RINSE, BOMB } = INPUT;
+  const MOVES = LEFT | RIGHT | ROTATE_CW | ROTATE_CCW;
+
+  /** An input whose board has a full meter (unless told otherwise) and gunk pending. */
+  function choosing({ full = true, pending = true } = {}) {
+    const opened = [];
+    const input = new MatchInput({ canOpen: () => full, canRinse: () => pending, onOpen: () => opened.push(1) });
+    return { input, opened };
+  }
+
+  it('does nothing on Space while the meter is not full', () => {
+    const { input, opened } = choosing({ full: false });
+    input.press('Space');
+    expect(input.choice.open).toBe(false);
+    expect(opened).toEqual([]);
+    expect(input.next()).toBe(0);
+  });
+
+  it.each([
+    ['KeyD', BOMB],
+    ['ArrowRight', BOMB],
+    ['KeyE', BOMB],
+    ['KeyX', BOMB],
+    ['KeyA', RINSE],
+    ['ArrowLeft', RINSE],
+    ['KeyQ', RINSE],
+    ['KeyZ', RINSE],
+  ])('picks with %s, without moving or rotating', (code, bit) => {
+    const { input, opened } = choosing();
+    input.press('Space');
+    expect(opened).toEqual([1]);
+    input.release('Space');
+    input.press(code);
+    expect(input.choice.open).toBe(false);
+    expect(input.next()).toBe(bit);
+    // Still held after the pick: never acts.
+    for (let i = 0; i < 40; i++) expect(input.next() & (MOVES | RINSE | BOMB)).toBe(0);
+    input.release(code);
+    input.press(code);
+    expect(input.next() & MOVES).not.toBe(0);
+  });
+
+  it('closes on a second Space without firing', () => {
+    const { input } = choosing();
+    input.press('Space');
+    input.release('Space');
+    input.press('Space');
+    expect(input.choice.open).toBe(false);
+    input.press('KeyD');
+    expect(input.next()).toBe(RIGHT);
+  });
+
+  it('stops a held move key, which picks nothing until pressed again', () => {
+    const { input } = choosing();
+    input.press('ArrowLeft');
+    expect(input.next()).toBe(LEFT);
+    input.press('Space');
+    expect(ticksWith(input, LEFT | RINSE | BOMB, 60)).toEqual([]);
+  });
+
+  it('keeps soft drop working', () => {
+    const { input } = choosing();
+    input.press('KeyS');
+    input.press('Space');
+    expect(input.next()).toBe(SOFT_DROP);
+    input.release('KeyS');
+    input.press('ArrowDown');
+    expect(input.next()).toBe(SOFT_DROP);
+  });
+
+  it('ignores Rinse while nothing is pending, staying open', () => {
+    const { input } = choosing({ pending: false });
+    input.press('Space');
+    input.press('KeyQ');
+    expect(input.choice.open).toBe(true);
+    expect(input.next()).toBe(0);
+    input.press('KeyE');
+    expect(input.next()).toBe(BOMB);
+  });
+
+  it('closes by itself after choiceTicks', () => {
+    const { input } = choosing();
+    input.press('Space');
+    for (let i = 0; i < CONTROLS.choiceTicks - 1; i++) input.next();
+    expect(input.choice.open).toBe(true);
+    input.next();
+    expect(input.choice.open).toBe(false);
+    input.press('KeyD');
+    expect(input.next()).toBe(RIGHT);
+  });
+
+  it('is closed by releaseAll without a pick', () => {
+    const { input } = choosing();
+    input.press('Space');
+    input.releaseAll();
+    expect(input.choice.open).toBe(false);
+    expect(input.next()).toBe(0);
+  });
+
+  it('picks from buttons once and holds back rotate buttons', () => {
+    const { input } = choosing();
+    input.openChoice();
+    input.turn('cw');
+    expect(input.next()).toBe(0);
+    input.openChoice();
+    input.pick('bomb');
+    expect([input.next(), input.next()]).toEqual([BOMB, 0]);
+  });
+});

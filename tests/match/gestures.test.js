@@ -295,3 +295,20 @@ describe('a match played by touch', () => {
     expect(hashState(playReplay(copy))).toBe(hashState(runner.state));
   });
 });
+
+describe('held back by the meter choice', () => {
+  it('drops queued moves and taps, passing only soft drop', () => {
+    const touch = new TouchGestures();
+    touch.begin(1, 100, 100, 1);
+    touch.move(1, 160, 102);
+    expect(touch.next(false)).toBe(0);
+    expect(touch.next()).toBe(0);
+    touch.end(1);
+    touch.begin(2, 100, 100, 1);
+    touch.end(2);
+    expect(touch.next(false)).toBe(0);
+    touch.begin(3, 100, 100, 1);
+    touch.move(3, 100, 160);
+    expect(touch.next(false)).toBe(INPUT.SOFT_DROP);
+  });
+});

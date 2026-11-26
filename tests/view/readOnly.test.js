@@ -16,6 +16,7 @@ const bad = [
   "import { movePair } from '../core/pair.js'; export default movePair;",
   "import { playReplay } from '../core/replay.js'; export default playReplay;",
   "import MatchRunner from '../match/runner.js'; export default MatchRunner;",
+  "import { explode } from '../core/meter.js'; export default explode;",
   "export { step } from '../core/engine.js';",
   "export * from '../core/engine.js';",
   "export const x = import('../core/engine.js');",
@@ -30,8 +31,9 @@ describe('view lint', () => {
     const code = `import Phaser from 'phaser';
 import { COLUMNS, cellAt } from '../core/grid.js';
 import { otherCell } from '../core/pair.js';
+import { bombArea } from '../core/meter.js';
 import { VIEW } from '../config/index.js';
-export const x = [Phaser, COLUMNS, cellAt, otherCell, VIEW];`;
+export const x = [Phaser, COLUMNS, cellAt, otherCell, bombArea, VIEW];`;
     expect(await problems(code)).toEqual([]);
   });
 });

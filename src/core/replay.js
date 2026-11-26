@@ -2,12 +2,12 @@ import { createState, step } from './engine.js';
 import { createVersus, stepVersus } from './versus.js';
 
 // Replays: a match's seed and inputs. Inputs are run-length encoded as [mask, ticks]. Format 1 is a
-// solo match; format 2 is a versus match, whose masks hold the player's input in the low 5 bits and
-// the rival's in the next 5.
+// solo match; format 3 is a versus match, whose masks hold the player's input in the low 7 bits and
+// the rival's in the next 7. Format 2 (5 bits a side, before the meter) is no longer played.
 
 const SOLO = 1;
-const VERSUS = 2;
-const INPUT_BITS = 5;
+const VERSUS = 3;
+const INPUT_BITS = 7;
 const MAX_MASK = { [SOLO]: (1 << INPUT_BITS) - 1, [VERSUS]: (1 << (2 * INPUT_BITS)) - 1 };
 
 /**
@@ -55,7 +55,7 @@ export function recordInput(replay, match, input = 0) {
 }
 
 /**
- * Plays a replay and returns the final state: a board for format 1, a versus match for format 2.
+ * Plays a replay and returns the final state: a board for format 1, a versus match for format 3.
  * `onTick` gets a board's events, or [player events, rival events] in versus.
  * @param {Replay} replay
  * @param {(match: any, events: any[]) => void} [onTick]

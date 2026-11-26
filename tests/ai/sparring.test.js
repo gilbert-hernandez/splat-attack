@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { createSparring, greedyInput, planPair, sparringInput } from '../../src/ai/sparring.js';
+import { createSparring, greedyInput, meterInput, planPair, sparringInput } from '../../src/ai/sparring.js';
 import { RULES } from '../../src/config/rules.js';
 import { INPUT, createState, step } from '../../src/core/engine.js';
 import { createVersus, stepVersus } from '../../src/core/versus.js';
 import { stateWith } from '../core/fixtures.js';
 
-const MOVES = INPUT.LEFT | INPUT.RIGHT | INPUT.ROTATE_CW | INPUT.ROTATE_CCW;
+const MOVES = INPUT.LEFT | INPUT.RIGHT | INPUT.ROTATE_CW | INPUT.ROTATE_CCW | INPUT.RINSE | INPUT.BOMB;
+const MAX = RULES.meter.max;
+const PACE = createSparring().pace;
 
 describe('sparring rival', () => {
   it('gives the same inputs for the same state', () => {
@@ -63,16 +65,58 @@ describe('sparring rival', () => {
     const slow = createSparring({ actEvery: RULES.sparring.actEvery * 3, dropDelay: RULES.sparring.dropDelay * 3 });
     let splats = 0;
     let sent = 0;
+    let fired = 0;
     while (match.outcome === null && match.tick < 100000) {
       const player = sparringInput(slow, match.boards[0]);
-      const [, rivalEvents] = stepVersus(match, player, sparringInput(bot, match.boards[1]));
+      const [events, rivalEvents] = stepVersus(match, player, sparringInput(bot, match.boards[1]));
       for (const event of rivalEvents) {
         if (event.type === 'splat') splats++;
         if (event.type === 'attack') sent += event.sent;
       }
+      for (const event of [...events, ...rivalEvents]) if (event.type === 'rinse' || event.type === 'bomb') fired++;
     }
     expect(match.outcome).not.toBeNull();
     expect(splats).toBeGreaterThan(0);
     expect(sent).toBeGreaterThan(0);
+    expect(fired).toBeGreaterThan(0);
+  });
+
+  describe('meter', () => {
+    const TALL = new Array(RULES.visibleRows - PACE.bombRows + 1).fill('g......').join('\n');
+
+    it('Rinses once enough gunk is pending', () => {
+      const state = stateWith(TALL);
+      Object.assign(state, { meter: MAX, pending: PACE.rinseAt });
+      expect(meterInput(state, PACE)).toBe(INPUT.RINSE);
+      expect(sparringInput(createSparring(), state)).toBe(INPUT.RINSE);
+    });
+
+    it('Bombs a stack near the top when little gunk is pending', () => {
+      const state = stateWith(TALL);
+      Object.assign(state, { meter: MAX, pending: PACE.rinseAt - 1 });
+      expect(meterInput(state, PACE)).toBe(INPUT.BOMB);
+      const low = stateWith(TALL.split('\n').slice(1).join('\n'));
+      low.meter = MAX;
+      expect(meterInput(low, PACE)).toBe(0);
+    });
+
+    it('does nothing until the meter is full', () => {
+      const state = stateWith(TALL);
+      Object.assign(state, { meter: MAX - 1, pending: 20 });
+      expect(meterInput(state, PACE)).toBe(0);
+    });
+
+    it('waits out its act cooldown before firing', () => {
+      const state = stateWith('.......');
+      const bot = createSparring();
+      sparringInput(bot, state);
+      Object.assign(state, { meter: MAX, pending: PACE.rinseAt });
+      bot.cooldown = 2;
+      expect([sparringInput(bot, state), sparringInput(bot, state), sparringInput(bot, state)]).toEqual([
+        0,
+        0,
+        INPUT.RINSE,
+      ]);
+    });
   });
 });

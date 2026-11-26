@@ -81,6 +81,7 @@ export default class BoardModel {
       else if (event.type === 'splat') this.splat(event.groups);
       else if (event.type === 'gunkHit') this.hit(event.cracked, event.cleared);
       else if (event.type === 'drop') this.drop(event.cells);
+      else if (event.type === 'bomb') this.bomb(event.cells, event.color);
     }
     if (!state.pair) this.pair = null;
     else if (this.pair) this.pair.tick(state);
@@ -88,6 +89,8 @@ export default class BoardModel {
   }
 
   lock(cells) {
+    // A Bomb's falls can still be running when the pair locks: they finish at once.
+    for (const blob of this.blobs.values()) if (this.isFalling(blob)) blob.fall = null;
     const drawn = this.pair.positions();
     cells.forEach(({ col, row, color }, i) => {
       // Blobs carry on from where the pair was drawn.
@@ -123,6 +126,14 @@ export default class BoardModel {
     for (const { col, row } of cleared) {
       this.blobs.delete(idOf(col, row));
       this.breaks.push({ col, row, start: this.ticks });
+    }
+  }
+
+  /** A Bomb's cells leave at once, blobs and gunk alike, and the area takes its stain. */
+  bomb(cells, color) {
+    for (const { col, row } of cells) {
+      this.blobs.delete(idOf(col, row));
+      this.stains[idOf(col, row)] = color;
     }
   }
 

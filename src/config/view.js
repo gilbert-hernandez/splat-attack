@@ -11,4 +11,12 @@ export const VIEW = {
   // Pending gunk: at most this many icons, each as tall as its strip, this far apart.
   pendingIcons: 6,
   pendingIconGap: 4,
+  // The meter: its fill sits this far inside the frame (in frame pixels), and is tinted while full.
+  meterInset: 2,
+  meterFullTint: 0xfacc15,
+  // The meter choice's panel and the Bomb target's outline.
+  choiceDepth: 60,
+  choicePanelColor: 0x14121f,
+  choicePanelAlpha: 0.85,
+  bombOutline: { width: 2, color: 0xffffff, alpha: 0.9 },
 };

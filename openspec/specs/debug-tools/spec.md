@@ -6,7 +6,7 @@ Defines the developer keys that set up, slow down and end a match while testing,
 ## Requirements
 
 ### Requirement: Debug keys
-In development builds a match SHALL have keys to set the next pair, load a prepared board, freeze the clock, step one tick, fast-forward, send a row of gunk to the player's or the rival's board, fill the player's or the rival's meter, force a win and force the end, and SHALL list them on screen. They SHALL do nothing while paused and in production builds. Prepared boards MAY include stains and gunk. At least one SHALL set up a stain match, at least one SHALL set up a gunk crack and a gunk clear, and at least one SHALL set up a Bomb.
+In development builds a match SHALL have keys to set the next pair, load a prepared board, freeze the clock, step one tick, fast-forward, send a row of gunk to the player's or the rival's board, fill the player's or the rival's meter, move to the next rival, force a win and force the end, and SHALL list them on screen. They SHALL do nothing while paused and in production builds. Prepared boards MAY include stains and gunk. At least one SHALL set up a stain match, at least one SHALL set up a gunk crack and a gunk clear, and at least one SHALL set up a Bomb.
 
 #### Scenario: Set the next pair
 - **WHEN** two color keys are pressed
@@ -35,6 +35,10 @@ In development builds a match SHALL have keys to set the next pair, load a prepa
 #### Scenario: Bomb board
 - **WHEN** the Bomb board is loaded, the meter is filled, and Bomb is fired with the pair where its comment says
 - **THEN** the Bomb clears gunk and blobs, and the blobs that fall afterward splat when the pair locks
+
+#### Scenario: Next rival
+- **WHEN** the next-rival key is pressed in a Ladder match against `rival5`
+- **THEN** a new match starts at once against `rival1` with a new seed, the rival label changes, and later climbing continues from `rival1`; in Endless the key does nothing
 
 #### Scenario: Step
 - **WHEN** the step key is pressed

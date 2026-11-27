@@ -55,9 +55,10 @@ export const RULES = {
     stainFill: 2,
     refillPairs: 2,
   },
-  // The sparring rival (src/ai/sparring.js) until the CPU rivals arrive: at most one move, rotation or
-  // meter use per actEvery ticks, then dropDelay ticks in place before it soft-drops. With a full meter
-  // it Rinses once rinseAt gunk is pending, or else Bombs when its stack is within bombRows of the top.
+  // The sparring rival (src/ai/sparring.js), the baseline the CPU rivals are measured against: at most
+  // one move, rotation or meter use per actEvery ticks, then dropDelay ticks in place before it
+  // soft-drops. With a full meter it Rinses once rinseAt gunk is pending, or else Bombs when its stack
+  // is within bombRows of the top.
   sparring: {
     actEvery: 6,
     dropDelay: 30,

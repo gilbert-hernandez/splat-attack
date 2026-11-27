@@ -5,6 +5,7 @@ import { nextInt, seedRng } from '../../src/core/rng.js';
 import MatchRunner from '../../src/match/runner.js';
 import MatchInput from '../../src/match/input.js';
 import { RULES } from '../../src/config/rules.js';
+import { createRival, rivalInput } from '../../src/ai/rival.js';
 import { createSparring, sparringInput } from '../../src/ai/sparring.js';
 
 const idle = () => 0;
@@ -115,6 +116,31 @@ describe('versus runner', () => {
     expect(runner.rival).toBe(runner.match.boards[1]);
     expect(runner.rival.pairs).toBeGreaterThan(1);
     expect(seen.rival).toBeGreaterThan(0);
+  });
+
+  it("gives the rival's input source both boards, as they are before the tick", () => {
+    const runner = ladder({
+      readRivalInput: (board, opponent) => {
+        expect(board).toBe(runner.rival);
+        expect(opponent).toBe(runner.state);
+        expect([board.tick, opponent.tick]).toEqual([runner.match.tick, runner.match.tick]);
+        return 0;
+      },
+    });
+    runner.advance(20);
+    expect(runner.match.tick).toBe(20);
+  });
+
+  it('a CPU rival plays a versus match that replays to the same hash', { timeout: 60000 }, () => {
+    const bot = createRival('rival3', 5);
+    const runner = ladder({
+      readInput: () => 16,
+      readRivalInput: (board, opponent) => rivalInput(bot, board, opponent),
+    });
+    runner.rate = 8;
+    for (let i = 0; i < 4000 && !runner.over; i++) runner.update(1000 / 60);
+    expect(runner.outcome).toBe('loss');
+    expect(hashState(playReplay(JSON.parse(JSON.stringify(runner.replay))))).toBe(hashState(runner.match));
   });
 
   it('records a versus replay that plays back to the same match', () => {

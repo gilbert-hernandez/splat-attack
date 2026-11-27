@@ -29,7 +29,7 @@ See proposal.md, Why. Current state:
 
 | File | Role |
 |---|---|
-| `src/config/rivals.js` | `RIVALS`: five frozen profiles, plus `validateRivals()` |
+| `src/config/rivals.js` | `RIVALS`: five profiles, pure data (`validateRivals()` lives in `src/ai/rival.js` and runs at its import) |
 | `src/ai/view.js` | `seen(board, opponent)`: the visible snapshot a bot plans from |
 | `src/ai/evaluate.js` | `simulate(snapshot, placement)` and `rate(result, weights)` |
 | `src/ai/planner.js` | The incremental beam search, as a resumable job |
@@ -52,24 +52,24 @@ Profile shape:
   lookahead,       // 1..RULES.nextPairs + 1 (the falling pair counts as 1)
   beam,            // states kept per depth
   budget,          // work units per tick
-  pickTop,         // the weighted choice draws from this many best moves
-  pickWeights,     // e.g. [70, 20, 10]: chance per rank, out of 100
-  weights: { points, attack, chainSetup, stainMatch, stainSetup, height, spawnColumn, holes, gunk },
-  meter: { rinseAt, bombWhenHeight, bombBias },
+  pickWeights,     // e.g. [70, 20, 10]: chance per rank, out of 100; its length is how many ranks
+  fire: { at, smallPercent },  // chains shorter than `at` are worth smallPercent of their value
+  weights: { points, attack, cancel, chainSetup, stainMatch, stainSetup, links, height, spawnColumn, gunk },
+  meter: { rinseAt, rinseBias, bombBias },
 }
 ```
 
-`validateRivals()` runs at import. It throws, naming the rival, if `lookahead` exceeds `RULES.nextPairs + 1`, if `pickWeights` doesn't match `pickTop`, or if a value isn't a positive integer where one is required.
+`validateRivals()` runs at import. It throws, naming the rival, if `lookahead` exceeds `RULES.nextPairs + 1`, if `pickWeights` don't add up to 100, if a weight isn't an integer or `chainSetup` is negative, if `fire` is out of range, or if a value isn't a positive integer where one is required.
 
-Starting styles (numbers are first guesses, tuned against the sim in task 4):
+Final styles, after tuning against the sim in task 4:
 
 | Rival | Style | Pace (act/drop) | Look | Beam | Budget | Pick | Character |
 |---|---|---|---|---|---|---|---|
-| 1 | ROOKIE | 10/40 | 1 | 1 | 6 | top 4, loose | Stacks near the middle, takes splats when it sees them, Rinses late |
-| 2 | RUSHER | 4/6 | 2 | 4 | 12 | top 3 | High `attack`, low `chainSetup`. Fires small chains fast and Bombs often |
-| 3 | PAINTER | 6/20 | 2 | 6 | 16 | top 3 | High `stainMatch` and `stainSetup`. Splats on its own stains and Bombs to paint |
-| 4 | BUILDER | 6/24 | 3 | 6 | 24 | top 2 | High `chainSetup`, low `attack`. Holds for big chains and Rinses to protect them |
-| 5 | ACE | 3/4 | 3 | 8 | 32 | top 2, tight | Balanced weights, fast, uses the meter well, rarely settles for less |
+| 1 | ROOKIE | 10/40 | 1 | 1 | 6 | 55/25/12/8 | No chain setup, avoids the meter, Rinses late (`rinseAt` 18) |
+| 2 | RUSHER | 5/10 | 2 | 4 | 12 | 70/20/10 | High `attack`, fires any chain, Bombs often |
+| 3 | PAINTER | 5/16 | 2 | 6 | 16 | 75/18/7 | High `stainMatch` and `stainSetup`, holds for 4-chains, Bombs to paint |
+| 4 | BUILDER | 6/24 | 3 | 6 | 64 | 85/15 | High `chainSetup`, holds for 6-chains, Rinses to protect them |
+| 5 | ACE | 3/4 | 3 | 8 | 80 | 92/8 | Balanced, fast, holds for 4-chains |
 
 The names are working labels for the placeholder text. David's character names can replace them in SA-14 without changing any id.
 
@@ -95,44 +95,47 @@ The planner never simulates gunk drops, because the columns they land in come fr
 
 The Bomb runs the engine's own `explode()` on a copy of the snapshot's grid, stains and pair. No new rules code exists in `src/ai/`. If the engine changes, the planner follows.
 
-*Reachability.* A placement counts only if the pair can reach it from the spawn cell in the current grid. The planner runs a small check: walk the columns between the spawn column and the target at the pair's row, and try the needed rotations using the engine's `movePair` and `rotatePair` on a grid copy. Without this check, planned moves can turn out impossible behind tall columns. The check costs one work unit per placement.
+*Reachability.* A placement counts only if the pair can reach it from where it is. `steer()` turns a copy of the pair the short way, then moves it a column at a time with the engine's `rotatePair` and `movePair`, as the bot will. Placements that put the same colors on the same cells count once. Finding a pair's placements costs one work unit.
 
 ### 5. Rating
 
-`rate(result, weights, snapshot)` is a weighted integer sum:
+Two weighted integer sums. `rateMove` values what a placement did right away:
 
-- **`points`:** chain points from the move
-- **`attack`:** `floor(power / powerPerGunk)`, minus any that just cancels own pending gunk, plus a smaller credit for that cancel
-- **`chainSetup`:** the longest chain a single extra blob could trigger. For each column top and each color that occurs on the board, drop one blob and resolve. This costs up to 35 resolves, so it counts as `ceil(probes / 8)` work units. It runs only for states that reach the final depth of the beam.
-- **`stainMatch`:** stain matches made now
-- **`stainSetup`:** blobs resting on a stain of their own color
-- **`height`:** the sum of column heights, plus pending gunk as rows
-- **`spawnColumn`:** a large penalty growing with the spawn column's height, and a fatal value for top-out
-- **`holes`:** empty cells under a filled cell in the same column
-- **`gunk`:** gunk left on the board
+- **`points`:** chain points
+- **`attack`:** per gunk sent after cancelling own pending gunk; **`cancel`:** per pending gunk cancelled
+- **`stainMatch`:** per blob that splatted on its own stain
+- **`fire`:** a chain shorter than `fire.at` steps is worth only `fire.smallPercent` of the above, so builders hold for bigger chains
 
-Scores at each depth add up the move's immediate terms. Board-shape terms count only on the final state.
+`rateShape` values the board left behind:
+
+- **`links`:** per pair of same-color neighbors
+- **`height`:** per filled cell, and per pending gunk
+- **`spawnColumn`:** per square of the spawn column's height; a topped-out board is FATAL
+- **`gunk`:** per gunk on the board
+- **`stainSetup`:** per blob resting on its own color's stain
+- **`chainSetup`:** `chainSetup × longest²`, where `longest` is the longest chain one more blob could set off. Probes go on each column top with a free visible cell, one per color touching it, kept only if they would complete a group, and deduplicated by the group they join. Each probe step costs one work unit, and it runs on every node, so building toward a chain counts at every depth.
+
+A node's score is the sum of its moves' `rateMove` values plus `rateShape` of its board.
 
 *Alternative:* learned weights or Monte Carlo rollouts. Rollouts need hidden pieces (unfair) or random guesses (high cost). Rejected for the demo.
 
 ### 6. Incremental beam search under a work budget
 
-A plan is a job object with a queue of nodes to expand: `{depth, snapshot, firstMove, score}`. `stepPlan(job, units)` expands nodes until it runs out of units. Simulating and rating one placement costs one unit plus the reachability unit. A `chainSetup` probe batch costs its own units. The job keeps:
+A plan is a generator-driven job. `stepPlan(job, units)` resumes it until it has spent its units: one per simulated placement, plus one per chain step past the first, one per placement search, and one per chain-setup probe step. So the work per tick is capped exactly and doesn't depend on how the units were split. The job keeps:
 
 - `best`, the best first move found so far, updated after each depth-1 placement so that a fallback always exists after the first unit
 - `frontier`, the top `beam` nodes at each depth, sorted by score and tie-broken by column and then orientation for determinism
 
 The job starts when a pair spawns, from a snapshot taken then. The bot can't spend units during settle or splat phases, because the board it would plan for isn't known yet. When the job finishes, the bot picks a move:
 
-1. Group the depth-1 moves by the best score reachable from each.
-2. Take the top `pickTop`.
-3. Draw a rank with `pickWeights` from the bot's stream.
+1. Rank the first moves by the deepest depth reached, then the best score reachable from each, then their order.
+2. Draw a rank with `pickWeights` from the bot's stream, skipping fatal moves.
 
 The rank is drawn once per pair, so the cost and the choice don't depend on how many ticks planning took.
 
-Steering reuses the sparring order: rotate, move, then soft-drop, all under the rival's pace. If the pair is grounded (`pair.budget < RULES.lockBudget`) while the job still runs, the job stops, and the bot steers to `best` or soft-drops.
+Steering: the danger Rinse first, then the move's meter use (Rinse, or move to the Bomb column then Bomb), then turn, move and soft-drop, all under the rival's pace. While the job still runs, the bot heads for `best` but doesn't soft-drop or fire the meter (except the danger Rinse), so a slow plan doesn't strand the pair. If the pair is grounded (`pair.budget < RULES.lockBudget`) while the job still runs, the job stops, and `best` is final.
 
-Rough budget arithmetic: about 22 placements per pair. ACE at look 3 with beam 8 needs 22 + 8×22 + 8×22 ≈ 374 placements, plus probes on about 176 leaves. That is about 550 units, or 17 ticks at 32 units per tick. At level 1 a pair takes about 32 ticks per row to fall, so planning finishes before the pair has dropped one row. A placement costs a few microseconds, so 32 units cost well under 1 ms. The sim measures the worst tick, and the budgets are tuned down if any tick goes over.
+Budgets: the unit cap is the guarantee. Tick times on the development machine (WSL) are dominated by preemption: the sparring rival's own worst tick is about 27 ms, so the worst and p99.9 times are noise. The ACE at 80 units runs about 0.4 ms median and about 3 ms p99 per tick there. The sim reports p99.9 and worst ms as information, and the phone check (task 6.2) confirms there's no stutter. Lower budgets are the fallback, but at 48 units the BUILDER beat the PAINTER only 57% of the time.
 
 ### 7. The meter as planner moves
 
@@ -141,7 +144,7 @@ While `meter === max` and the board is falling, the depth-1 moves also include:
 - **`rinse`**, if `pending > 0`. The pair still has to be placed, so this is a Rinse followed by the best placement, with pending set to 0 in the snapshot.
 - **`bomb@c`**, for each column `c` the pair can reach: move the pivot to `c`, fire Bomb, then place.
 
-These moves are rated like any others. The profile's `meter.rinseAt` is a hard floor: always Rinse once pending ≥ `rinseAt` and pending + height would reach the spawn row. `bombBias` adds a style-specific bonus, so the PAINTER Bombs for stains and the RUSHER Bombs early. Firing counts against the action pace. Steering puts the pivot over the chosen column before the Bomb bit is sent, so the Bomb's target is the one that was planned.
+These moves are rated like any others, plus `rinseBias` or `bombBias`, so the PAINTER Bombs for stains and the ROOKIE avoids the meter. The danger Rinse overrides the plan: with a full meter, always Rinse once pending ≥ `rinseAt`, or when the spawn column's height plus the pending gunk's rows would reach the spawn row. Firing counts against the action pace. Steering puts the pivot over the chosen column before the Bomb bit is sent, so the Bomb's target is the one that was planned.
 
 ### 8. The bot's random stream
 
@@ -157,8 +160,8 @@ The stream advances only when a rank is drawn, once per pair. Replays need nothi
 
 - **The runner.** `readRivalInput(board, opponent)` is the only API change. `MatchRunner.advance` passes `(this.rival, this.state)`. The sparring call sites ignore the second argument.
 - **ModeSelect** starts Ladder with `{mode: 'ladder', rival: 1}`.
-- **MatchScene** reads `data.rival` (default 1, clamped to 1–5) and builds `createRival(\`rival${n}\`, seed)`. It shows the label, filled in from `FLOW.rivalLabel` (for example `RIVAL 3 · PAINTER`), and passes `rival` to Result through the stats.
-- **ResultScene** shows the rival row. Play again sends `{mode, rival: next}`: `next = outcome === 'win' ? (rival % 5) + 1 : rival`. Leaving for the title drops it.
+- **MatchScene** reads `data.rival` (default 1, kept in 1–5 by `rivalNumber` in `src/match/ladder.js`) and builds `createRival(\`rival${n}\`, seed)`. It shows the label, filled in from `FLOW.rivalLabel` (`RIVAL 3 · PAINTER`, or `#3 PAINTER` in portrait), and passes `rival` to Result in the scene data.
+- **ResultScene** names the rival in the mode line (`LADDER · RIVAL 3 · PAINTER`), so the stat rows and their places are unchanged. Play again sends `{mode, rival: next}`: `next = outcome === 'win' ? (rival % 5) + 1 : rival`. Leaving for the title drops it.
 - **Pause → quit** goes to the title, so the climb resets for free.
 - **The `KeyV` debug key** (`rival`) restarts the match with a new seed against the next rival and updates the scene's rival. The hint gains `V rival`.
 
@@ -169,14 +172,16 @@ The stream advances only when a rank is drawn, once per pair. Replays need nothi
 A `rivalLabel` text place is added to `match.ladder` in every layout:
 
 - **Landscape:** above the rival's pending gunk, in both modes
-- **Portrait:** just above the half-size rival board
+- **Portrait:** in its short form at the top of the rival's column, beside the player's pending gunk; the reserved gunk area narrows to 240 px to make room
+
+Each place is a box the label is centered in, with its size and form (`long` or `short`).
 
 The overlap tests gain the label, with the longest label string measured. The landscape fixture is regenerated (`UPDATE_LANDSCAPE=1`) because the label is a new Ladder object.
 
 ### 11. `npm run sim`
 
 - **Scripts.** `scripts/sim.js` reads the options (`--matches`, `--rivals`, `--seed`, `--quick`, `--workers`, default `min(4, cores)`). It builds the match list and sends chunks to `scripts/simWorker.js` through `node:worker_threads`. It gathers the per-match records in seed order, so the report doesn't depend on the worker count.
-- **One match.** `createVersus(seed)` with the two bots, run with `stepVersus` until an outcome or `SIM.maxTicks` (36,000 ticks, 10 minutes of play). The worker times each bot call with `performance.now()`, which is allowed because scripts aren't pure. It records: the outcome, ticks, both scores, chains, attacks, gunk, stain matches, rinses, bombs, the worst units and the worst ms.
+- **One match.** `createVersus(seed)` with the two bots, run with `stepVersus` until an outcome or `SIM.maxTicks` (36,000 ticks, 10 minutes of play). The worker times each bot call with `performance.now()`, which is allowed because scripts aren't pure, into a histogram of 0.05 ms buckets. It records: the outcome, ticks, both scores, chains, attacks, gunk, stain matches, rinses, bombs, the most units, the worst ms and the histogram, from which the report takes p99.9.
 - **Sides.** The seeds alternate which bot plays side 0.
 - **Seeds.** `seed + i`, with a default first seed of 1.
 - **Output.** A plain-text table, then the pass checks. The script exits 1 if any check fails.
@@ -204,7 +209,7 @@ The overlap tests gain the label, with the longest label string measured. The la
 
 - [**The strength order may not come out monotonic at first**] → Pace, lookahead, budget and pick tightness are four independent levers. Task 4 tunes them against the sim before anything else depends on them. The full run is local, and CI checks the cheaper order only.
 - [**Sim runtime in CI**] → 100 matches across 4 workers. If the quick run goes over two minutes, lower `SIM.maxTicks` for quick mode, or cut the quick count to 16. Either way the report states it.
-- [**Phones are slower than the dev box**] → The 1 ms target leaves plenty of room in a 16 ms frame on a phone that is 5× slower. The manual Android check confirms there's no hitch, and a smaller ACE budget is the fallback.
+- [**Phones are slower than the dev box, and tick times can't be measured reliably here**] → The unit budget caps the work per tick exactly. The manual Android check against the ACE confirms there's no hitch, and smaller BUILDER and ACE budgets (with retuning) are the fallback.
 - [**Bots can't plan for gunk landing**] → This is fair by design. The pending height penalty stands in. SA-11's adaptation can react after drops.
 - [**The weighted choice looks like variety but isn't SA-11's variety**] → The proposal says so, and the `--variety` metrics come only in SA-11.
 - [**The rival label changes the landscape fixture**] → This is expected. It is regenerated deliberately, as it was for the meters in SA-9.

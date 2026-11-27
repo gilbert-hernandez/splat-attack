@@ -4,6 +4,22 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.1.8] - 2026-11-26
+
+### Added
+
+- **CPU rivals** (SA-10): five rivals now play the Ladder rival's board, each with its own style: 1 ROOKIE (slow and beatable), 2 RUSHER (fast, many small attacks), 3 PAINTER (splats on its stains and Bombs to paint), 4 BUILDER (holds for big chains) and 5 ACE (fast and sharp). They plan ahead with the visible pairs, Rinse and Bomb on their own, and see only what you can see. Profiles are in `src/config/rivals.js`.
+- **Fair, steady play** (SA-10): rivals play through the same inputs as you, at their own pace, and do a capped amount of planning work each tick, so play stays smooth on phones.
+- **Ladder climb** (SA-10): Ladder starts at rival 1. A win moves to the next rival, and after rival 5 back to rival 1; a loss or draw meets the same rival again. Going back to the title starts over.
+- **Rival label** (SA-10): the rival's number and style show by its board (RIVAL 3 · PAINTER, or #3 PAINTER in portrait) and on the result.
+- **`npm run sim`** (SA-10): plays rivals against each other in Node on worker threads and checks the strength order: rival 1 beats the sparring rival, and each rival beats the one below it at least 60% of the time. It reports chains, scores, attacks, stains, meter use, work units and tick times. CI runs the quick version (20 matches per pairing).
+- **Debug** (SA-10): `V` starts a new match against the next rival.
+
+### Changed
+
+- **Sparring rival:** no longer plays in the game; it is the baseline `npm run sim` measures rival 1 against.
+- **Replays:** unchanged. The format and every stored hash stay the same.
+
 ## [0.1.7] - 2026-11-26
 
 ### Added

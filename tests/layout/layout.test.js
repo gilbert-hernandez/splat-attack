@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { BOARD, RULES, TEXT, VIEW } from '../../src/config/index.js';
+import { BOARD, RIVALS, RULES, TEXT, VIEW } from '../../src/config/index.js';
 import { layoutFor, screenFor } from '../../src/layout/layout.js';
+import { rivalLabel } from '../../src/match/ladder.js';
 
 describe('screenFor', () => {
   it.each([
@@ -82,7 +83,7 @@ describe.each([640, 700, 780])('portrait match at height %i', (height) => {
   it.each(['ladder', 'endless'])('%s: nothing overlaps or leaves the screen', (mode) => {
     for (const input of ['keyboard', 'touch']) {
       const all = expectApart(portrait(height, input), mode);
-      expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 16 : 12);
+      expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 17 : 12);
       if (mode === 'ladder') expect(inside(all.pendingPlayer, all.gunk)).toBe(true);
       expect(all.meterPlayer).toEqual(all.meter);
     }
@@ -123,7 +124,39 @@ it('layouts never change the configuration', () => {
 describe('landscape match in touch mode', () => {
   it.each(['ladder', 'endless'])('%s: nothing overlaps or leaves the screen', (mode) => {
     const all = expectApart(landscape('touch'), mode);
-    expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 12 : 8);
+    expect(Object.keys(all)).toHaveLength(mode === 'ladder' ? 13 : 8);
+  });
+});
+
+describe('rival label', () => {
+  // Monospace glyphs are about 0.6 em wide.
+  const fits = ({ width, height, size, format }) => {
+    const longest = Math.max(...RIVALS.map((r) => rivalLabel(r.number, format).length));
+    return longest * size * 0.6 <= width && size <= height;
+  };
+  const layouts = [
+    ['landscape keyboard', landscape('keyboard')],
+    ['landscape touch', landscape('touch')],
+    ...[640, 700, 780].flatMap((h) => [
+      [`portrait ${h} keyboard`, portrait(h, 'keyboard')],
+      [`portrait ${h} touch`, portrait(h, 'touch')],
+    ]),
+  ];
+
+  it.each(layouts)('%s: fits the longest name and only Ladder has one', (_name, /** @type {any} */ layout) => {
+    expect(fits(layout.match.ladder.rivalLabel)).toBe(true);
+    expect(layout.match.endless.rivalLabel).toBeUndefined();
+  });
+
+  it('sits right above the rival in landscape and at the top of its column in portrait', () => {
+    for (const layout of [landscape('keyboard'), landscape('touch')]) {
+      const { rivalLabel: label, pendingRival } = layout.match.ladder;
+      expect(label.y + label.height).toBeLessThanOrEqual(pendingRival.y);
+      expect(label.x + label.width / 2).toBe(pendingRival.x + pendingRival.width / 2);
+    }
+    const { rivalLabel: label, rival } = portrait(640).match.ladder;
+    expect(label.x).toBeLessThanOrEqual(rival.x);
+    expect(label.x + label.width).toBeGreaterThanOrEqual(rival.x + BOARD.columns * BOARD.cell * rival.scale);
   });
 });
 

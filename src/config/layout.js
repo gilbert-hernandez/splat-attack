@@ -53,6 +53,8 @@ export const LAYOUT = {
         meterRival: { x: 684, y: 500, width: 200, height: 16 },
         // The meter choice's panel (its center), over the top of the player's board.
         choice: { x: 176, y: 140 },
+        // The rival's name, centered in this box above its pending gunk.
+        rivalLabel: { x: 664, y: 36, width: 240, height: 24, size: 16, format: 'long' },
       },
       endless: {
         player: { x: 368, y: 100, scale: 1, next: { x: 608, y: 100, spacing: 104 } },
@@ -101,6 +103,7 @@ export const LAYOUT = {
           meterPlayer: { x: 148, y: 500, width: 200, height: 16 },
           meterRival: { x: 612, y: 500, width: 200, height: 16 },
           choice: { x: 248, y: 140 },
+          rivalLabel: { x: 592, y: 36, width: 240, height: 24, size: 21, format: 'long' },
         },
       },
     },
@@ -147,12 +150,14 @@ export const LAYOUT = {
         rival: { x: 244, y: 288, scale: 0.5 },
         gameOver: { x: 120, y: 284 },
         // The player's in the reserved gunk area; the rival's under its board, beside the meter.
-        pendingPlayer: { x: 8, y: 58, width: 344, height: 24 },
+        pendingPlayer: { x: 8, y: 58, width: 224, height: 24 },
         pendingRival: { x: 244, y: 488, width: 112, height: 16 },
         // The player's meter fills the reserved meter area; the rival's is a thin bar under its pending gunk.
         meterPlayer: { x: 8, y: 488, width: 200, height: 16 },
         meterRival: { x: 244, y: 506, width: 112, height: 6 },
         choice: { x: 120, y: 130 },
+        // The rival's short name, at the top of the rival's column, beside the player's gunk area.
+        rivalLabel: { x: 240, y: 56, width: 120, height: 28, size: 14, format: 'short' },
       },
       endless: {
         player: { x: 32, y: 92, scale: 1, next: { x: 272, y: 84, spacing: 100 } },
@@ -164,7 +169,7 @@ export const LAYOUT = {
       // Space kept free. `hud` holds the ui texts; extra screen height goes to `touch`.
       areas: {
         hud: { x: 56, y: 0, width: 248, height: 56 },
-        gunk: { x: 0, y: 56, width: 360, height: 28 },
+        gunk: { x: 0, y: 56, width: 240, height: 28 },
         meter: { x: 8, y: 488, width: 200, height: 16 },
         touch: { x: 0, y: 512, width: 360, height: 120 },
       },

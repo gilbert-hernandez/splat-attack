@@ -1,4 +1,4 @@
-// The sparring rival: a one-ply greedy player that stands in for the CPU rivals until SA-10. It
+// The sparring rival: a one-ply greedy player, the baseline the CPU rivals are measured against. It
 // reads only the board it plays, keeps its own small state outside the match, and gives the same
 // per-tick inputs as a player, meter included. Unpaced, it also generates stored replays.
 import { RULES } from '../config/rules.js';

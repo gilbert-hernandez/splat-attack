@@ -41,10 +41,15 @@ describe('engine purity lint', () => {
     expect(await problems(code)).not.toEqual([]);
   });
 
-  it('also covers src/ai and the rules config', async () => {
+  it('also covers src/ai, the rules config and the rival profiles', async () => {
     expect(await problems('export const x = Math.random();', 'src/ai/sample.js')).not.toEqual([]);
     expect(await problems('export const x = 0.5;', 'src/config/rules.js')).not.toEqual([]);
     expect(await problems("export * from './board.js';", 'src/config/rules.js')).not.toEqual([]);
+    expect(await problems('export const x = 0.5;', 'src/config/rivals.js')).not.toEqual([]);
+    expect(await problems("export * from './rules.js';", 'src/config/rivals.js')).not.toEqual([]);
+    expect(
+      await problems("import { RIVALS } from '../config/rivals.js'; export default RIVALS;", 'src/ai/x.js'),
+    ).toEqual([]);
   });
 
   it('allows pure code', async () => {

@@ -10,8 +10,8 @@ const pureRules = {
     {
       patterns: [
         {
-          regex: '^(?!\\./[\\w-]+\\.js$|\\.\\./(core|ai)/[\\w-]+\\.js$|\\.\\./config/rules\\.js$)',
-          message: `${purity} Import only from core, ai and config/rules.js.`,
+          regex: '^(?!\\./[\\w-]+\\.js$|\\.\\./(core|ai)/[\\w-]+\\.js$|\\.\\./config/(rules|rivals)\\.js$)',
+          message: `${purity} Import only from core, ai, config/rules.js and config/rivals.js.`,
         },
       ],
     },
@@ -83,9 +83,9 @@ export default [
   },
   // Game code runs in the browser.
   { files: ['src/**/*.js'], languageOptions: { globals: globals.browser } },
-  { files: ['src/core/**/*.js', 'src/ai/**/*.js', 'src/config/rules.js'], rules: pureRules },
+  { files: ['src/core/**/*.js', 'src/ai/**/*.js', 'src/config/rules.js', 'src/config/rivals.js'], rules: pureRules },
   {
-    files: ['src/config/rules.js'],
+    files: ['src/config/rules.js', 'src/config/rivals.js'],
     rules: { 'no-restricted-imports': ['error', { patterns: [{ regex: '.', message: purity }] }] },
   },
   { files: ['src/view/**/*.js'], rules: viewRules },

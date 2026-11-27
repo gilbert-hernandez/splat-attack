@@ -15,8 +15,9 @@ export default class MatchRunner {
    * @param {object} options
    * @param {number} options.seed
    * @param {() => number} options.readInput the player's next tick mask
-   * @param {(board: import('../core/engine.js').State) => number} [options.readRivalInput] makes it a
-   *   versus match: the rival's next tick mask, from the rival's board
+   * @param {(board: import('../core/engine.js').State, opponent: import('../core/engine.js').State) => number}
+   *   [options.readRivalInput] makes it a versus match: the rival's next tick mask, from the rival's
+   *   board and the player's, both as they are before the tick
    * @param {(state: import('../core/engine.js').State, events: import('../core/engine.js').Event[],
    *   rivalEvents: import('../core/engine.js').Event[] | null) => void} [options.onTick]
    *   called after every tick with the player's board and events (and the rival's events in versus),
@@ -77,7 +78,7 @@ export default class MatchRunner {
         this.onTick(this.state, step(this.state, input), null);
         continue;
       }
-      const rivalInput = this.over ? 0 : this.readRivalInput(this.rival);
+      const rivalInput = this.over ? 0 : this.readRivalInput(this.rival, this.state);
       if (this.replay) recordInput(this.replay, this.match, packInputs(input, rivalInput));
       const [events, rivalEvents] = stepVersus(this.match, input, rivalInput);
       this.onTick(this.state, events, rivalEvents);

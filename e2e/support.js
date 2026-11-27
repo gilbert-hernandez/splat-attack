@@ -100,7 +100,9 @@ export function advance(page, ticks, mask = undefined) {
     ([n, m]) => {
       const match = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
       match.runner.advance(n, m ?? undefined);
+      // Both boards, so a read right after doesn't wait for the next frame to see the rival's.
       match.view.draw();
+      match.rivalView?.draw();
     },
     [ticks, mask],
   );
@@ -109,10 +111,11 @@ export function advance(page, ticks, mask = undefined) {
 /** Drop pairs straight down until the match ends, plus enough ticks for its animations. */
 export function advanceToEnd(page) {
   return page.evaluate(() => {
-    const { runner, view } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
+    const { runner, view, rivalView } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
     for (let i = 0; i < 5000 && !runner.over; i++) runner.advance(1, 16);
     runner.advance(40, 0);
     view.draw();
+    rivalView?.draw();
   });
 }
 

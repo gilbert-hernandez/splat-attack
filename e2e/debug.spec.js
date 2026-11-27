@@ -195,6 +195,7 @@ test('debug keys do nothing while paused', async ({ page }) => {
     'KeyH',
     'KeyM',
     'KeyN',
+    'KeyV',
     'KeyW',
     'KeyR',
   ]) {

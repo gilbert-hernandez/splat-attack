@@ -55,11 +55,12 @@ test('the meters follow both boards: filled, full and emptied by the rival', asy
   await waitFrames(page);
   expect((await shown(page)).meters[0]).toEqual({ fill: 98, full: false });
 
-  // The rival's meter, full and a high stack: the sparring rival Bombs, and its meter shows empty.
+  // The rival's meter full and more gunk pending than its rinseAt: the CPU rival Rinses at once, and
+  // its meter shows empty.
   await page.evaluate(() => {
     const { runner } = /** @type {any} */ (window.__GAME__.scene.getScene('Match'));
     runner.rival.meter = 100;
-    for (let row = 2; row < 14; row++) runner.rival.grid[row * 7] = 3;
+    runner.rival.pending = 21;
   });
   await waitFrames(page);
   expect((await shown(page)).meters[1]).toEqual({ fill: 196, full: true });

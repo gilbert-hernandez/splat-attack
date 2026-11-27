@@ -62,7 +62,7 @@ A rival's random choices SHALL come only from a stream seeded from the match see
 - **THEN** their inputs differ
 
 ### Requirement: Work budget per tick
-A rival's planning SHALL be split into steps that cost work units, and in one tick a rival SHALL spend no more than its profile's budget. If its pair is grounded before planning is done, it SHALL play the best move found so far. The budgets SHALL be set so that the strongest rival's worst tick, as the sim measures it, stays under 1 ms on the development machine.
+A rival's planning SHALL be split into steps that cost work units, and in one tick a rival SHALL spend no more than its profile's budget. If its pair is grounded before planning is done, it SHALL play the best move found so far. The unit budget SHALL be the guarantee on per-tick work; tick times depend on the machine and its load, so the sim reports them as information and doesn't check them. The budgets SHALL be confirmed by play on the Android phone against the strongest rival without stutter.
 
 #### Scenario: Budget held
 - **WHEN** any rival plays a whole match

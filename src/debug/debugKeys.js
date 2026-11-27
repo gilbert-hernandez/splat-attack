@@ -1,4 +1,4 @@
-import { DEBUG, FLOW, RULES } from '../config/index.js';
+import { DEBUG, FLOW, RIVALS, RULES } from '../config/index.js';
 import { spawn } from '../core/engine.js';
 import { forceTopOut } from '../core/versus.js';
 import { onLayout, placeText } from '../layout/manager.js';
@@ -39,8 +39,16 @@ export default class DebugKeys {
     else if (action === 'gunkRival' && runner.rival) this.sendGunk(runner.rival);
     else if (action === 'meterPlayer') this.fillMeter(runner.state);
     else if (action === 'meterRival' && runner.rival) this.fillMeter(runner.rival);
+    else if (action === 'rival' && runner.match) this.nextRival();
     else if (action === 'win' && runner.match) this.forceEnd(1);
     else if (action === 'end') this.forceEnd(0);
+  }
+
+  /** Starts a new match, on a new seed, against the next rival; the climb carries on from there. */
+  nextRival() {
+    const { match } = this;
+    match.rival = (match.rival % RIVALS.length) + 1;
+    match.begin(match.randomSeed());
   }
 
   pickColor(color) {

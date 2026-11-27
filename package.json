@@ -1,7 +1,7 @@
 {
   "name": "splat-attack",
   "private": true,
-  "version": "0.1.7",
+  "version": "0.1.8",
   "type": "module",
   "description": "Splat Attack: a score-chasing falling-pair versus puzzle game (Phaser 4 + Vite).",
   "license": "MIT",
@@ -20,7 +20,8 @@
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test",
     "replays": "node scripts/replays.js",
     "release:check": "node scripts/release-check.js",
-    "release:archive": "node scripts/release-archive.js"
+    "release:archive": "node scripts/release-archive.js",
+    "sim": "node scripts/sim.js"
   },
   "dependencies": {
     "phaser": "4.2.1"

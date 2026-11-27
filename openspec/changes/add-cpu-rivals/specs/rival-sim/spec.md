@@ -35,7 +35,7 @@ For each pairing, the sim SHALL report:
 - longest chain and average longest chain
 - average score and score spread
 - attacks sent, average gunk per attack, stain matches per splat, Rinses and Bombs
-- each bot's worst work units in one tick and worst milliseconds in one tick
+- each bot's most work units in one tick, and its p99.9 and worst milliseconds per tick, as information only
 
 #### Scenario: Report printed
 - **WHEN** a sim run finishes

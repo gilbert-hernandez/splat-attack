@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
-import { createSparring, sparringInput } from '../ai/sparring.js';
+import { createRival, rivalInput } from '../ai/rival.js';
 import { CONTROLS, DEBUG, DISPLAY, FLOW, RULES, VIEW } from '../config/index.js';
 import DebugKeys from '../debug/debugKeys.js';
-import { onLayout } from '../layout/manager.js';
+import { onLayout, placeText } from '../layout/manager.js';
 import TouchGestures from '../match/gestures.js';
 import MatchInput from '../match/input.js';
+import { rivalLabel, rivalNumber } from '../match/ladder.js';
 import MatchRunner from '../match/runner.js';
 import MatchStats from '../match/stats.js';
 import TouchButton from '../ui/TouchButton.js';
@@ -13,16 +14,18 @@ import MeterView from '../view/MeterView.js';
 import PendingView from '../view/PendingView.js';
 import { addSceneLabel } from './sceneLabel.js';
 
-// A match: the runner advances the engine, the view draws it. Ladder is a versus match against the
-// sparring rival (until the CPU rivals arrive), Endless the player's board alone.
+// A match: the runner advances the engine, the view draws it. Ladder is a versus match against one of
+// the CPU rivals, climbing on wins; Endless is the player's board alone.
 export default class MatchScene extends Phaser.Scene {
   constructor() {
     super('Match');
   }
 
-  /** @param {{mode?: string}} [data] */
+  /** @param {{mode?: string, rival?: number}} [data] */
   init(data) {
     this.mode = data?.mode === 'endless' ? 'endless' : 'ladder';
+    /** The Ladder rival's number, 1 to 5. */
+    this.rival = rivalNumber(data?.rival);
     this.elapsedMs = 0;
     this.pauseOpen = false;
     this.finished = false;
@@ -35,6 +38,9 @@ export default class MatchScene extends Phaser.Scene {
     this.pending = solo ? null : [new PendingView(this), new PendingView(this)];
     this.meters = solo ? [new MeterView(this)] : [new MeterView(this), new MeterView(this)];
     this.makeChoicePanel();
+    this.rivalText = solo
+      ? null
+      : this.add.text(0, 0, '', { fontFamily: FLOW.fontFamily, color: FLOW.textColor }).setOrigin(0.5);
     this.gameOverText = this.add
       .text(0, 0, FLOW.endMessages.over, {
         fontFamily: FLOW.fontFamily,
@@ -57,7 +63,7 @@ export default class MatchScene extends Phaser.Scene {
     });
     this.makeButtons();
     this.debug = DEBUG.enabled ? new DebugKeys(this) : null;
-    this.begin(crypto.getRandomValues(new Uint32Array(1))[0]);
+    this.begin(this.randomSeed());
     this.listen();
     onLayout(this, (layout, rotated) => this.place(layout, rotated));
     addSceneLabel(this);
@@ -125,6 +131,12 @@ export default class MatchScene extends Phaser.Scene {
     this.choicePanel.setPosition(choice.x, choice.y);
     FLOW.choiceLabels[mode].forEach((label, i) => this.choiceTexts[i].setText(label));
     this.rivalView?.place(match.ladder.rival);
+    if (this.rivalText) {
+      const { x, y, width, height, size, format } = match.ladder.rivalLabel;
+      this.rivalFormat = format;
+      this.rivalText.setText(rivalLabel(this.rival, format));
+      placeText(this.rivalText, { x: x + width / 2, y: y + height / 2, size });
+    }
     this.pending?.[0].place(match.ladder.pendingPlayer);
     this.pending?.[1].place(match.ladder.pendingRival);
     this.gameOverText.setPosition(gameOver.x, gameOver.y);
@@ -205,6 +217,11 @@ export default class MatchScene extends Phaser.Scene {
     for (const button of Object.values(this.buttons)) button.press.reset();
   }
 
+  /** A fresh match seed. */
+  randomSeed() {
+    return crypto.getRandomValues(new Uint32Array(1))[0];
+  }
+
   /** Starts a match on this seed, replacing any match in progress. */
   begin(seed) {
     this.releaseInput();
@@ -212,7 +229,10 @@ export default class MatchScene extends Phaser.Scene {
     this.stats = new MatchStats();
     this.overTicks = 0;
     this.gameOverText.setVisible(false);
-    const rival = this.rivalView ? createSparring() : null;
+    this.rivalText?.setText(rivalLabel(this.rival, this.rivalFormat));
+    /** The CPU rival playing the rival's board, or null in Endless. */
+    this.rivalBot = this.rivalView ? createRival(`rival${this.rival}`, seed) : null;
+    const bot = this.rivalBot;
     this.runner = new MatchRunner({
       seed,
       // While the choice is open, gestures pass soft drop only.
@@ -220,7 +240,7 @@ export default class MatchScene extends Phaser.Scene {
         const moves = !this.keys.choice.open;
         return this.keys.next() | this.touch.next(moves);
       },
-      readRivalInput: rival ? (board) => sparringInput(rival, board) : undefined,
+      readRivalInput: bot ? (board, opponent) => rivalInput(bot, board, opponent) : undefined,
       onTick: (state, events, rivalEvents) => this.tick(state, events, rivalEvents),
     });
     this.view.show(this.runner.state);
@@ -290,6 +310,6 @@ export default class MatchScene extends Phaser.Scene {
     this.finished = true;
     this.scene.stop('UI');
     const { state, outcome } = this.runner;
-    this.scene.start('Result', { mode: this.mode, stats: this.stats.summary(state, outcome) });
+    this.scene.start('Result', { mode: this.mode, rival: this.rival, stats: this.stats.summary(state, outcome) });
   }
 }

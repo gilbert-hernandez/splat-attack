@@ -21,9 +21,10 @@ export const DEBUG = {
     KeyH: 'gunkRival',
     KeyM: 'meterPlayer',
     KeyN: 'meterRival',
+    KeyV: 'rival',
     KeyW: 'win',
     KeyR: 'end',
   },
-  hint: '1-5 twice: next pair · B board · P freeze · . step · F fast · G/H gunk you/rival · M/N meter you/rival · W win · R end',
+  hint: '1-5 twice: next pair · B board · P freeze · . step · F fast · G/H gunk you/rival · M/N meter you/rival · V rival · W win · R end',
   fastRate: 8,
 };

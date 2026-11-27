@@ -13,7 +13,8 @@ export default class ModeSelectScene extends Phaser.Scene {
     const heading = this.add
       .text(0, 0, 'CHOOSE A MODE', { fontFamily: FLOW.fontFamily, fontSize: '36px' })
       .setOrigin(0.5);
-    const pick = (mode) => () => this.scene.start('Match', { mode });
+    // Ladder starts its climb at the first rival.
+    const pick = (mode) => () => this.scene.start('Match', mode === 'ladder' ? { mode, rival: 1 } : { mode });
     this.ladderButton = new Button(this, FLOW.modes.ladder, pick('ladder'));
     this.endlessButton = new Button(this, FLOW.modes.endless, pick('endless'));
     this.backButton = new Button(this, 'BACK', () => this.scene.start('Title'));

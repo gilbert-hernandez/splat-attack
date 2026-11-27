@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { FLOW } from '../config/index.js';
+import { nextRival, rivalLabel, rivalNumber } from '../match/ladder.js';
 import { formatTime } from '../match/stats.js';
 import { onLayout, placeText } from '../layout/manager.js';
 import Button from '../ui/Button.js';
@@ -11,9 +12,11 @@ export default class ResultScene extends Phaser.Scene {
     super('Result');
   }
 
-  /** @param {{mode: string, stats: import('../match/stats.js').Stats}} data */
-  init({ mode, stats }) {
+  /** @param {{mode: string, rival?: number, stats: import('../match/stats.js').Stats}} data */
+  init({ mode, rival, stats }) {
     this.mode = mode;
+    /** The Ladder rival just played. */
+    this.rival = rivalNumber(rival);
     this.stats = stats;
     this.ready = false;
     this.left = false;
@@ -26,7 +29,8 @@ export default class ResultScene extends Phaser.Scene {
     const placeholders = this.registry.get('placeholders') ?? [];
     const panel = this.add.image(0, 0, 'ui_result_panel');
     const heading = text(36, outcome ? FLOW.outcomes[outcome] : 'RESULT');
-    const mode = text(18, FLOW.modes[this.mode]);
+    const ladder = this.mode === 'ladder';
+    const mode = text(18, ladder ? `${FLOW.modes.ladder} · ${rivalLabel(this.rival)}` : FLOW.modes[this.mode]);
     this.scoreText = text(28, `SCORE ${score}`);
     const rows = [`LEVEL ${level}`, `PAIRS ${pairs}`, `LONGEST CHAIN ${longestChain}`, `TIME ${formatTime(ticks)}`];
     if (outcome) rows.push(`GUNK SENT ${gunkSent}`);
@@ -70,7 +74,12 @@ export default class ResultScene extends Phaser.Scene {
   }
 
   playAgain() {
-    this.leave('Match', { mode: this.mode });
+    // Ladder climbs on a win.
+    const { outcome } = this.stats;
+    this.leave(
+      'Match',
+      this.mode === 'ladder' ? { mode: this.mode, rival: nextRival(this.rival, outcome) } : { mode: this.mode },
+    );
   }
 
   toTitle() {

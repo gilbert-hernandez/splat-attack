@@ -12,6 +12,7 @@ npm run dev        # dev server with hot reload
 npm test           # unit tests (Vitest)
 npm run build      # static production build into dist/
 npm run preview    # serve dist/ locally
+npm run sim        # CPU rival strength check (see below)
 ```
 
 `dist/` runs from any static web server and any path. The dev server is at http://localhost:5174; dev builds show scene names and have [debug keys](#debug-keys).
@@ -42,7 +43,23 @@ npm run coverage       # unit-test coverage; HTML report in coverage/index.html
 - **Bomb** clears the 3×3 area around the top filled visible cell in the falling pair's pivot column (or that column's bottom row if it's empty): blobs, gunk and cracked gunk. It stains every visible cell there with the pivot's color, and gravity follows at once while the pair keeps falling. Hidden rows are never touched. Fired with no pair falling, the Bomb is armed (`state.armed`) and goes off on the next pair's first falling tick. `bombArea(state)` reads the target without changing anything.
 - **Score:** firing adds and costs nothing. A Bomb's cells aren't a splat: no points, power, stain matches or fill. Groups its gravity leaves splat when the next pair locks, as step 1 of that pair's chain.
 
-**The sparring rival** (`src/ai/sparring.js`) plays the Ladder rival until the CPU rivals arrive. It is a one-ply greedy player, paced by `RULES.sparring`: one move, rotation or meter use per `actEvery` ticks, then `dropDelay` ticks in place before it soft-drops. With a full meter it Rinses once `rinseAt` gunk is pending, or else Bombs when its stack is within `bombRows` of the top. Unpaced, it also makes stored replays.
+**CPU rivals** (`src/ai/`, profiles in `src/config/rivals.js`) play the Ladder rival's board. There are five, each with a style: 1 ROOKIE (slow, shallow and error-prone), 2 RUSHER (fast, many small attacks), 3 PAINTER (splats on its stains and Bombs to paint), 4 BUILDER (holds for big chains) and 5 ACE (fast and sharp). Each profile sets its pace, lookahead (pairs planned with, up to the falling pair plus the preview), beam width, work budget, pick weights, the weights its board rating uses, a `fire` threshold that holds back short chains, and its meter use.
+
+- **Fair play.** A rival reads only `seen(board, opponent)` (`src/ai/view.js`): both grids and stains, pending gunk, meters and scores, its own pair and the visible preview. Never the random streams or pairs past the preview. It plays through the same per-tick inputs as a player, paced by `actEvery` and `dropDelay`, and its own random choices come from a stream seeded from the match seed and its id. So matches stay deterministic and replays (format 3) and their hashes are unchanged.
+- **Planning** (`src/ai/planner.js`, `src/ai/evaluate.js`): when a pair spawns, a beam search over its placements and meter moves (Rinse, Bomb at each reachable column) starts. Each tick it does at most `budget` work units: one per simulated placement, plus one per extra chain step, per placement search and per chain-setup probe step. So a rival's work per tick is capped in units, not time. Until the search is done it heads for the best move so far but doesn't drop or fire the meter. When the pair is about to lock, the best move so far is final. When done, it draws which of its best moves to play from `pickWeights`. It always Rinses with a full meter when `rinseAt` gunk is pending, or when the pending gunk would stack its spawn column to the top.
+- **Ladder climb** (`src/match/ladder.js`): Ladder starts at rival 1. A win moves to the next rival, after rival 5 back to rival 1; a loss or draw meets the same rival again. Back to the title starts again at rival 1. The rival's label (`FLOW.rivalLabel`, e.g. RIVAL 3 · PAINTER, or #3 PAINTER in portrait) shows by its board and on the result.
+
+**The sparring rival** (`src/ai/sparring.js`) is the baseline the rivals are measured against. It is a one-ply greedy player, paced by `RULES.sparring`: one move, rotation or meter use per `actEvery` ticks, then `dropDelay` ticks in place before it soft-drops. With a full meter it Rinses once `rinseAt` gunk is pending, or else Bombs when its stack is within `bombRows` of the top. Unpaced, it also makes stored replays.
+
+### Rival simulator
+
+```bash
+npm run sim                          # 100 matches per pairing on up to 4 workers
+npm run sim -- --quick               # 20 matches per pairing (CI)
+npm run sim -- --rivals 3,4 --matches 40 --seed 9 --workers 2
+```
+
+It pits rival 1 against the sparring rival and each other rival against the one below it, on seeds counting up from `--seed`, alternating boards by seed. Matches run on `node:worker_threads`; results don't depend on the number of workers. A match still going at `SIM.maxTicks` (10 minutes) is cut off. The report gives, per pairing, draws, cut-offs, match length and, per side: win %, longest and average longest chain, average score and its spread, attacks per match and gunk per attack, stain matches per splat, Rinses and Bombs per match, the most work units in one tick, and the p99.9 and worst time per tick. Tick times are only a guide: they depend on the machine and its load. The checks (`scripts/simConfig.js`): rival 1 must win more than half against the sparring rival, and each other rival at least 60% against the one below it (more than half with `--quick`). A failed check exits 1. `tests/ai/styles.test.js` checks that the styles show against sparring.
 
 Engine tests draw boards as text with `tests/core/fixtures.js`: `.` is empty, letters are colors (`r y g b p`), `#` is gunk and `+` cracked gunk, and the falling pair shows in uppercase. Stain layers use the same letters, with `.` for a clean cell: `parseStains` and `renderStains`, or a third argument to `stateWith`.
 
@@ -77,7 +94,7 @@ A window taller than it is wide gets a portrait game, 360 wide and 640 to 780 ta
 
 Every position is in `src/config/layout.js`, for both orientations. A scene makes its objects once and moves them in a callback passed to `onLayout(scene, place)`, which runs at once and after every change, also while the scene is paused. To add something, put its place in both orientations (`npm test` fails if one lacks it) and set it there.
 
-Space for pending gunk, the meter and touch controls is reserved in the portrait match's `areas`; `match.ladder.pendingPlayer` and `pendingRival` place each board's pending gunk (above each board in landscape; in the gunk area and under the rival board in portrait), `meterPlayer` and `meterRival` the meters (under each board in landscape; in the meter area and under the rival's pending gunk in portrait), `choice` the meter choice's panel, and `match.buttons` holds the buttons' tap targets: below the board and top right in portrait, in the outer 120 px of each side in landscape. The layout depends on the mode too: in landscape touch mode, `touch` moves the Ladder boards inward. Unit tests check that nothing overlaps, and that every tap target is at least 48 CSS px on windows of 375×553 or 568×320.
+Space for pending gunk, the meter and touch controls is reserved in the portrait match's `areas`; `match.ladder.pendingPlayer` and `pendingRival` place each board's pending gunk (above each board in landscape; in the gunk area and under the rival board in portrait), `meterPlayer` and `meterRival` the meters (under each board in landscape; in the meter area and under the rival's pending gunk in portrait), `choice` the meter choice's panel, `rivalLabel` the rival's name (a box it's centered in, with its size and `long` or `short` form), and `match.buttons` holds the buttons' tap targets: below the board and top right in portrait, in the outer 120 px of each side in landscape. The layout depends on the mode too: in landscape touch mode, `touch` moves the Ladder boards inward. Unit tests check that nothing overlaps, and that every tap target is at least 48 CSS px on windows of 375×553 or 568×320.
 
 Text sizes are in the layout too (`size` on each text's place). Every player-facing text must be at least 12 CSS px on those two windows (`TEXT` in `src/config/layout.js`): 14 game px in portrait, and 21 in landscape touch mode, where `touch` raises them. Keyboard landscape keeps its sizes. A unit test and `e2e/text.spec.js` check it.
 
@@ -104,6 +121,7 @@ In a match, dev builds only (`src/debug/`, keys in `src/config/display.js`):
 | `F`        | Fast-forward (8×) on or off                                                                             |
 | `G` / `H`  | Sends a row of gunk to the player / the rival (`H` in Ladder only)                                      |
 | `M` / `N`  | Fills the player's / the rival's meter and clears its refill limit (`N` in Ladder only)                 |
+| `V`        | Starts a new match against the next Ladder rival, on a new seed (Ladder only)                           |
 | `W`        | Wins a Ladder match: the rival's board tops out                                                         |
 | `R`        | Forces the end: the player's board tops out                                                             |
 
@@ -120,7 +138,7 @@ npm run record -- --touch         # the same on an upright phone (390×844), men
 
 `npm run e2e` starts its own servers on ports 5175 and 5176. Each test leaves `test-results/<test>/video.webm`, and `npx playwright show-report` opens the report. Tests read game state through `window.__GAME__` (dev builds only). Wait on state or frames with the helpers in `e2e/support.js`, never on the clock. For gameplay, `startStopped` starts a match on a seed with its clock stopped and `advance` runs an exact number of ticks. For another orientation, set the viewport size; `e2e/responsive.spec.js` has helpers. `e2e/touch.spec.js` sends real touch events through Chromium; `fingers` in `e2e/support.js` presses, drags and lifts several. A page with a touch screen starts in touch mode, but starting a match with `startStopped` switches to keyboard mode, so call `useTouch` after it. `e2e/touch-flow.spec.js` plays the whole loop by touch. `e2e/page.spec.js` and `e2e/safe-area.spec.js` emulate a phone (`isMobile`): pinches, drags and long presses on the bars, and notch insets through Chromium's `Emulation.setSafeAreaInsetsOverride`. Tests block the browser's own focus changes (`ignoreWindowBlur`), since a lost focus pauses; `blurWindow` and `setHidden` in `e2e/support.js` send them on purpose (`e2e/focus.spec.js`). `e2e/landscape.spec.js` fails if anything moves at 960×540 in keyboard mode; if that's intended, run `UPDATE_LANDSCAPE=1 npx playwright test landscape` and review the diff.
 
-GitHub Actions runs check, build and e2e on every push and pull request; a failed run keeps its report and videos for 14 days.
+GitHub Actions runs check, the quick sim, build and e2e on every push and pull request; a failed run keeps its report and videos for 14 days.
 
 ## Layout
 
@@ -128,7 +146,7 @@ GitHub Actions runs check, build and e2e on every push and pull request; a faile
 src/main.js                Phaser.Game config (FIT, pixelArt, no physics)
 src/config/                tunables (rules.js: the ones that affect results)
 src/core/                  the rules engine: pure, deterministic, no Phaser
-src/ai/                    the sparring rival (pure, like the engine)
+src/ai/                    the CPU rivals and the sparring rival (pure, like the engine)
 src/match/                 tick runner, keyboard and touch input, stats
 src/ui/                    buttons, how they handle presses, and the input mode
 src/debug/                 debug keys and boards (dev builds)
@@ -140,7 +158,7 @@ src/assets/img/            david's PNGs go here
 src/scenes/                Boot → Preload → Title → ModeSelect → Match (+ UI), Pause, Result
 tests/                     unit tests
 e2e/                       browser tests
-scripts/                   recording, stored replays and release check
+scripts/                   recording, stored replays, release check and the rival simulator
 ASSETS.md                  the art spec
 PLAN.md                    the overall plan
 openspec/                  specs and changes

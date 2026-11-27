@@ -1,4 +1,4 @@
-# Runs the same commands you run locally: npm ci, check, build and e2e.
+# Runs the same commands you run locally: npm ci, check, the quick sim, build and e2e.
 name: CI
 
 on:
@@ -21,6 +21,9 @@ jobs:
 
       # Format check, lint, typecheck, unit tests (stops at the first failure).
       - run: npm run check
+
+      # Rival strength order: each CPU rival beats the one below it (20 matches per pairing).
+      - run: npm run sim -- --quick
 
       - run: npx playwright install --with-deps chromium
 

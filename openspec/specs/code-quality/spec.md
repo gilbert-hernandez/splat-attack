@@ -24,7 +24,7 @@ The project SHALL provide separate commands to format, check formatting, lint, t
 - **THEN** a table and an HTML report list every file in `src/`, including those no test loads
 
 ### Requirement: Continuous integration
-Every push and pull request SHALL run the combined check, the quick rival sim, the production build and the browser tests.
+Every push and pull request SHALL run the combined check, the quick rival sim, the quick variety run, the production build and the browser tests.
 
 #### Scenario: Failing browser test
 - **WHEN** a browser test fails in CI
@@ -33,6 +33,10 @@ Every push and pull request SHALL run the combined check, the quick rival sim, t
 #### Scenario: Strength order broken
 - **WHEN** a change breaks the quick sim's strength order
 - **THEN** the CI run fails at the sim step
+
+#### Scenario: Rivals repeat themselves
+- **WHEN** a change makes a rival fail the quick variety run's opening targets
+- **THEN** the CI run fails at the variety step
 
 ### Requirement: Engine purity
 Lint SHALL fail when code in `src/core/` or `src/ai/` imports Phaser or other game code outside the rules and the rival profiles, or uses randomness, the clock, browser globals or non-integer math. The rules config and the rival profiles SHALL follow the same purity rules.

@@ -92,14 +92,15 @@ New, because the engine is deterministic:
 - SemVer 0.x. `package.json` is the only source; the title screen shows it (`-dev (<commit>)` in dev).
 - A change that affects scores or bots also bumps `rulesVersion`; a test of stored replay hashes fails if someone forgets.
 - **Each Dev ticket** bumps the patch and adds a dated `CHANGELOG.md` section with its SA number. The bump is the last OpenSpec task. After merge: annotated tag `vX.Y.Z`.
-- **The last ticket of a milestone** bumps the minor instead, plus a GitHub pre-release with the `dist/` archive and its SHA-256 (Arcade needs both).
+- **The last ticket of a milestone** bumps the minor instead.
+- **Every tag** gets a GitHub pre-release with the `dist/` archive, its SHA-256 and the Arcade `config/games.php` values, made by `.github/workflows/release.yml` (SA-31).
 - Art tickets don't bump; SA-14 does when their files land.
 - A unit test fails if `package.json` and the newest CHANGELOG version differ. `npm run release:check` confirms the version isn't already tagged and the tree is clean.
 
 | Milestone | Tickets | Releases |
 |---|---|---|
 | M1 Core | SA-1 to SA-6 | 0.0.1 … 0.0.5, then **0.1.0** |
-| M2 Versus | SA-26 to SA-29 (mobile), then SA-7 to SA-13 | 0.1.1 … 0.1.10, then **0.2.0** |
+| M2 Versus | SA-26 to SA-29 (mobile), then SA-7 to SA-13, with SA-31 after SA-11 | 0.1.1 … 0.1.11, then **0.2.0** |
 | M3 Art & Polish | SA-14 to SA-17 (+ Art) | 0.2.1 … 0.2.3, then **0.3.0** (demo) |
 
 ## 5. Workflow
@@ -131,6 +132,7 @@ Every commit and push needs Gilbert's OK, no Claude co-author lines. Use the Git
 | SA-9 | Splat Attack meter | `add-splat-meter` | Fill, Rinse, Bomb, limits; works on both boards and by touch | 8 |
 | SA-10 | CPU rivals + `npm run sim` | `add-cpu-rivals` | 5 bots with different styles; sim report shows rising strength; no frame hitches | 9 |
 | SA-11 | Rival variety & adaptation | `add-rival-variety` | Per-match variation, mid-match adaptation; `--variety` passes; strength and score spread stay in band | 10 |
+| SA-31 | Release workflow | `add-release-workflow` | A version tag makes a GitHub pre-release with the repeatable archive, `.sha256` and Install on Arcade block; dry run by hand; never replaces a published archive | 11 |
 | SA-12 | Ladder run, scoring & run records | `add-ladder-scoring` | Laps, run over on first loss, bonuses, anti-farming test, `rulesVersion`, `npm run verify`, local bests | 11 |
 | SA-13 | HUD and game flow | `add-hud-game-flow` | Mode select, prominent score, chain, meter, pending gunk, boards hidden on pause, portrait and landscape, result breakdown + personal best | 12 |
 | SA-14 | Integrate david's art | `integrate-art-assets` | No placeholder warnings; animations; 1×/2× visual check in both orientations | 13, all Art |
@@ -158,7 +160,7 @@ SA-18 precedes SA-19–25. SA-30 follows SA-24 and SA-25. SA-18–25 and SA-30 a
 
 ## 8. Vikunja (created 2026-11-24)
 
-Project id 10, identifier `SA`, shared with david (read & write). Kanban view 48: To Do 39 → In Progress 40 → Review 42 → Done 41. Labels: Dev 31, Art 32, M1 Core 33, M2 Versus 36, M3 Art & Polish 35. Task ids: SA-1 to SA-25 = 200 to 224; SA-26 to SA-30 = 227 to 231. SA-26 to SA-29 use the M2 Versus label.
+Project id 10, identifier `SA`, shared with david (read & write). Kanban view 48: To Do 39 → In Progress 40 → Review 42 → Done 41. Labels: Dev 31, Art 32, M1 Core 33, M2 Versus 36, M3 Art & Polish 35. Task ids: SA-1 to SA-25 = 200 to 224; SA-26 to SA-30 = 227 to 231; SA-31 = 286. SA-26 to SA-29 and SA-31 use the M2 Versus label.
 
 ## 9. Schedule
 

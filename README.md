@@ -12,6 +12,7 @@ npm run dev        # dev server with hot reload
 npm test           # unit tests (Vitest)
 npm run build      # static production build into dist/
 npm run preview    # serve dist/ locally
+npm run package    # build and write the release archive into release/ (see Releasing)
 npm run sim        # CPU rival strength and variety checks (see below)
 ```
 
@@ -165,7 +166,7 @@ src/assets/img/            david's PNGs go here
 src/scenes/                Boot → Preload → Title → ModeSelect → Match (+ UI), Pause, Result
 tests/                     unit tests
 e2e/                       browser tests
-scripts/                   recording, stored replays, release check and the rival simulator
+scripts/                   recording, stored replays, release check and packaging, and the rival simulator
 ASSETS.md                  the art spec
 PLAN.md                    the overall plan
 openspec/                  specs and changes
@@ -177,7 +178,25 @@ Name and size the PNG as listed in [ASSETS.md](ASSETS.md), copy it into `src/ass
 
 ## Version
 
-`package.json` is the only source; the title screen shows it. Each Dev ticket bumps it and adds a dated `CHANGELOG.md` section (`npm test` fails if they differ). After merging to `master`, `npm run release:check` lists anything wrong; when it says ready, push the annotated tag `v<version>`. For a milestone, `npm run release:archive` then writes `release/splat-attack-<version>.tar.gz` and its `.sha256` for the GitHub pre-release.
+`package.json` is the only source; the title screen shows it. Each Dev ticket bumps it and adds a dated `CHANGELOG.md` section (`npm test` fails if they differ).
+
+## Releasing
+
+Every version tag becomes a GitHub pre-release (while 0.x) carrying the archive Arcade installs: `splat-attack-<version>.tar.gz`, the contents of `dist/` at its root, and its `.sha256`. `.github/workflows/release.yml` does it; the rules are in `scripts/release.js` and the workflow calls them through `scripts/release-ci.js`.
+
+1. On the ticket branch, bump `package.json` and add the dated `CHANGELOG.md` section.
+2. Merge to `master` with `--ff-only`, push, and wait for CI on `master` to pass (the release job doesn't rerun the browser tests or the sim).
+3. `npm run release:check`. When it says ready, push the annotated tag: `git tag -a v<version> -m "v<version>: SA-n …"` then `git push origin v<version>`.
+4. The workflow checks the tag against `package.json` and the CHANGELOG, runs `npm run check`, builds, packages and creates the pre-release titled `v<version>` with the CHANGELOG section as notes. The notes end with an **Install on Arcade** block.
+5. Copy that block's `version`, `download_url` and `sha256` into Arcade's `config/games.php`.
+
+For a milestone title (`v0.2.0: M2 Versus`), create the release by hand before pushing the tag, or rename it afterward; the workflow keeps an existing release's title and notes.
+
+Started by hand (`gh workflow run release.yml --ref <branch>`), the workflow is a dry run: the archive is kept as the run's artifact (`gh run download`) and no release changes.
+
+Archives are repeatable: the same commit built with the same tools gives the same SHA-256. `npm run package` writes one into `release/` on any branch; `npm run release:archive` does the same after the `release:check` checks (or on the commit its tag points to).
+
+A published archive is never replaced: if the attached one's hash differs from a new build, the run fails and leaves the release alone. Fix a bad release with a new patch version. Only for a release Arcade doesn't use yet, delete the archive from the release (`gh release delete-asset v<version> splat-attack-<version>.tar.gz`) and re-run the job.
 
 ## Workflow
 

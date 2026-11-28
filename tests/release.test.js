@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { compareVersions, newestChangelogVersion, releaseProblems } from '../scripts/release.js';
+import {
+  arcadeBlock,
+  BLOCK_END,
+  BLOCK_START,
+  changelogSection,
+  checkTag,
+  compareVersions,
+  newestChangelogVersion,
+  releaseProblems,
+  uploadDecision,
+  versionFromTag,
+  withArcadeBlock,
+} from '../scripts/release.js';
 
 const ready = {
   version: '0.0.2',
@@ -59,4 +71,114 @@ it('compares versions by number', () => {
 it('reads the newest dated changelog version', () => {
   expect(newestChangelogVersion('## [Unreleased]\n\n## [0.2.0] - 2026-01-02\n## [0.1.0] - 2026-01-01')).toBe('0.2.0');
   expect(newestChangelogVersion('# Changelog')).toBeNull();
+});
+
+const changelog = [
+  '# Changelog',
+  '',
+  '## [Unreleased]',
+  '',
+  '- Not yet',
+  '',
+  '## [0.1.10] - 2026-11-28',
+  '',
+  '### Added',
+  '',
+  '- Release workflow',
+  '',
+  '## [0.1.1] - 2026-11-25',
+  '',
+  '- Touch',
+  '',
+  '[0.1.1]: https://example.com/v0.1.1',
+].join('\n');
+
+describe('versionFromTag', () => {
+  it.each([
+    ['v0.1.10', '0.1.10'],
+    ['v1.2.3', '1.2.3'],
+    ['v1.2', null],
+    ['demo-test', null],
+    ['0.1.10', null],
+    ['', null],
+  ])('%s', (tag, version) => {
+    expect(versionFromTag(tag)).toBe(version);
+  });
+});
+
+describe('changelogSection', () => {
+  it('reads a middle section without its heading', () => {
+    expect(changelogSection(changelog, '0.1.10')).toBe('### Added\n\n- Release workflow');
+  });
+
+  it('stops the last section at the link references', () => {
+    expect(changelogSection(changelog, '0.1.1')).toBe('- Touch');
+  });
+
+  it('does not match a prefix of another version or a missing one', () => {
+    expect(changelogSection('## [0.1.10] - 2026-11-28\n\n- x', '0.1.1')).toBeNull();
+    expect(changelogSection(changelog, '0.2.0')).toBeNull();
+  });
+
+  it('reads CRLF files', () => {
+    expect(changelogSection(changelog.replace(/\n/g, '\r\n'), '0.1.1')).toBe('- Touch');
+  });
+});
+
+describe('checkTag', () => {
+  it('accepts a matching tag with a changelog section', () => {
+    expect(checkTag('v0.1.10', '0.1.10', changelog)).toEqual({ ok: true, version: '0.1.10' });
+  });
+
+  it('names both versions on a mismatch', () => {
+    const result = checkTag('v0.1.11', '0.1.10', changelog);
+    expect(result.ok).toBe(false);
+    expect('error' in result && result.error).toMatch(/0\.1\.11.*0\.1\.10/);
+  });
+
+  it('fails without a changelog section', () => {
+    const result = checkTag('v0.2.0', '0.2.0', changelog);
+    expect('error' in result && result.error).toMatch(/no "## \[0\.2\.0\]" section/);
+  });
+
+  it('fails on a tag that is not a version', () => {
+    expect(checkTag('demo-test', '0.1.10', changelog).ok).toBe(false);
+  });
+});
+
+describe('Install on Arcade block', () => {
+  const block = arcadeBlock({ version: '0.1.10', url: 'https://x/a.tar.gz', sha256: 'abc' });
+  const count = (/** @type {string} */ text) => text.split(BLOCK_START).length - 1;
+
+  it('gives the games.php values between markers', () => {
+    expect(block.startsWith(BLOCK_START)).toBe(true);
+    expect(block.endsWith(BLOCK_END)).toBe(true);
+    expect(block).toContain("'version' => '0.1.10',");
+    expect(block).toContain("'download_url' => 'https://x/a.tar.gz',");
+    expect(block).toContain("'sha256' => 'abc',");
+  });
+
+  it('is appended to notes, or is the notes when empty', () => {
+    expect(withArcadeBlock('- Notes\n', block)).toBe(`- Notes\n\n${block}\n`);
+    expect(withArcadeBlock('', block)).toBe(`${block}\n`);
+  });
+
+  it('is replaced, never repeated, and moved to the end', () => {
+    const old = arcadeBlock({ version: '0.1.9', url: 'u', sha256: 'old' });
+    const notes = withArcadeBlock(`- Notes\r\n\r\n${old}\r\n\r\nAfter`, block);
+    expect(count(notes)).toBe(1);
+    expect(notes).not.toContain('old');
+    expect(notes).toBe(`- Notes\n\nAfter\n\n${block}\n`);
+    expect(withArcadeBlock(notes, block)).toBe(notes);
+  });
+});
+
+it.each([
+  [null, 'abc', 'upload'],
+  ['', 'abc', 'upload'],
+  ['abc', 'abc', 'skip'],
+  ['ABC', 'abc', 'skip'],
+  ['abc', 'def', 'conflict'],
+])('upload decision: attached %s, new %s → %s', (existing, next, decision) => {
+  expect(uploadDecision(existing, next)).toBe(decision);
 });

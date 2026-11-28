@@ -1,0 +1,125 @@
+# Release (SA-31). A pushed vX.Y.Z tag builds the game, packages dist/ as
+# splat-attack-<version>.tar.gz with a .sha256 file, and attaches both to the GitHub release
+# (creating it if needed), ending the notes with the values for Arcade's config/games.php.
+# Started by hand, it's a dry run: same checks, build and packaging, archive kept as a workflow
+# artifact, no release touched. The rules live in scripts/release.js (unit-tested) and
+# scripts/release-ci.js is their command line; this file only wires them to `gh`.
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history so the build's commit and the archive timestamps match the tagged commit.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      # Fail before anything else if the tag, package.json and CHANGELOG disagree.
+      - name: Check tag against package.json and CHANGELOG
+        if: github.event_name == 'push'
+        run: node scripts/release-ci.js check "$TAG"
+
+      - run: npm ci
+
+      # Format check, lint, typecheck, unit tests. Browser tests and the sim already ran in CI on
+      # this commit.
+      - run: npm run check
+
+      - name: Build and package
+        id: package
+        run: |
+          npm run package
+          version=$(node -p "require('./package.json').version")
+          archive="splat-attack-$version.tar.gz"
+          {
+            echo "version=$version"
+            echo "archive=$archive"
+            echo "sha256=$(cut -d' ' -f1 "release/$archive.sha256")"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: splat-attack-${{ steps.package.outputs.version }}
+          path: release/
+          retention-days: 30
+
+      # Publish (tag pushes only). Nothing on the release changes until the conflict check passes.
+      - name: Publish to the GitHub release
+        if: github.event_name == 'push'
+        env:
+          VERSION: ${{ steps.package.outputs.version }}
+          ARCHIVE: ${{ steps.package.outputs.archive }}
+          SHA256: ${{ steps.package.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          url="https://github.com/$repo/releases/download/$TAG/$ARCHIVE"
+
+          # 1. Does the release exist, and is an archive of this name already attached?
+          existing=""
+          if release_json=$(gh api "repos/$repo/releases/tags/$TAG" 2>/dev/null); then
+            exists=yes
+            digest=$(jq -r --arg n "$ARCHIVE" '.assets[] | select(.name == $n) | .digest // "none"' <<<"$release_json")
+            if [ "$digest" = "none" ]; then
+              # Older asset without a digest field: download it and hash it.
+              tmp=$(mktemp -d)
+              gh release download "$TAG" --repo "$repo" --pattern "$ARCHIVE" --dir "$tmp"
+              existing=$(sha256sum "$tmp/$ARCHIVE" | cut -d' ' -f1)
+            elif [ -n "$digest" ]; then
+              existing="${digest#sha256:}"
+            fi
+          else
+            exists=no
+          fi
+
+          # 2. Never replace a published archive with different contents.
+          decision=$(node scripts/release-ci.js decide "${existing:--}" "$SHA256")
+          echo "Release exists: $exists; archive: $decision"
+
+          # 3. Create the release if missing (pre-release while 0.x, notes from the CHANGELOG).
+          if [ "$exists" = no ]; then
+            node scripts/release-ci.js notes "$VERSION" notes.md
+            prerelease=()
+            if [ "${VERSION%%.*}" = 0 ]; then prerelease=(--prerelease); fi
+            gh release create "$TAG" --repo "$repo" --verify-tag --title "v$VERSION" \
+              --notes-file notes.md "${prerelease[@]}"
+          fi
+
+          # 4. Attach the archive (unless already there) and its checksum.
+          if [ "$decision" = upload ]; then
+            gh release upload "$TAG" --repo "$repo" "release/$ARCHIVE"
+          fi
+          gh release upload "$TAG" --repo "$repo" --clobber "release/$ARCHIVE.sha256"
+
+          # 5. End the notes with the Install on Arcade block (replaced, never repeated).
+          gh api "repos/$repo/releases/tags/$TAG" --jq '.body // ""' > current-notes.md
+          node scripts/release-ci.js arcade-notes current-notes.md "$VERSION" "$url" "$SHA256" new-notes.md
+          gh release edit "$TAG" --repo "$repo" --notes-file new-notes.md
+
+          {
+            echo "### Released $TAG"
+            echo
+            cat new-notes.md
+          } >> "$GITHUB_STEP_SUMMARY"

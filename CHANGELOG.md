@@ -4,6 +4,20 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.1.10] - 2026-11-28
+
+### Added
+
+- **Release workflow** (SA-31): pushing a `v<version>` tag builds the game and makes a GitHub pre-release (while 0.x) with `splat-attack-<version>.tar.gz` (the contents of `dist/` at its root, as Arcade installs it) and its `.sha256`. The notes are the CHANGELOG section and end with an **Install on Arcade** block giving the `version`, `download_url` and `sha256` for Arcade's `config/games.php`. Every tag now gets a release, not just milestones. The tag must match `package.json` and have a CHANGELOG section, and `npm run check` must pass, before anything is published.
+- **Dry run** (SA-31): started by hand on any branch, the workflow builds and packages the same way and keeps the archive as a run artifact, without touching any release.
+- **`npm run package`** (SA-31): builds and writes the release archive and checksum into `release/` on any branch.
+
+### Changed
+
+- **Repeatable archives** (SA-31): the same commit built with the same tools gives the same archive and SHA-256. `npm run release:archive` now uses the same packaging as the workflow.
+- **Published archives are never replaced** (SA-31): if a release already has an archive with a different hash, the workflow fails and leaves the release alone, so the hash in Arcade keeps verifying.
+- **The game:** unchanged.
+
 ## [0.1.9] - 2026-11-27
 
 ### Added

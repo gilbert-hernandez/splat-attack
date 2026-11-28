@@ -1,7 +1,7 @@
 {
   "name": "splat-attack",
   "private": true,
-  "version": "0.1.9",
+  "version": "0.1.10",
   "type": "module",
   "description": "Splat Attack: a score-chasing falling-pair versus puzzle game (Phaser 4 + Vite).",
   "license": "MIT",
@@ -21,6 +21,7 @@
     "replays": "node scripts/replays.js",
     "release:check": "node scripts/release-check.js",
     "release:archive": "node scripts/release-archive.js",
+    "package": "node scripts/package.js",
     "sim": "node scripts/sim.js"
   },
   "dependencies": {

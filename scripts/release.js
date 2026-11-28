@@ -1,4 +1,4 @@
-// Pure release rules, used by release-check.js and the unit tests.
+// Pure release rules, used by release-check.js, release-ci.js and the unit tests.
 
 /**
  * The newest dated version in a changelog, or null. `[Unreleased]` is ignored.
@@ -62,4 +62,112 @@ export function releaseProblems({
     problems.push(`${version} is not above the newest tag, v${newest}`);
   }
   return problems;
+}
+
+// Release workflow helpers (SA-31), used by release-ci.js and .github/workflows/release.yml.
+
+export const BLOCK_START = '<!-- arcade-install:start -->';
+export const BLOCK_END = '<!-- arcade-install:end -->';
+
+/**
+ * The version in a release tag, or null when the tag isn't `v<major>.<minor>.<patch>`.
+ * @param {string} tag
+ * @returns {string | null}
+ */
+export function versionFromTag(tag) {
+  return /^v(\d+\.\d+\.\d+)$/.exec(tag ?? '')?.[1] ?? null;
+}
+
+/**
+ * The body of a CHANGELOG section (`## [x.y.z] - date`) without its heading, or null if missing.
+ * Stops at the next `## ` heading or at the link reference definitions at the end of the file.
+ * @param {string} markdown
+ * @param {string} version
+ * @returns {string | null}
+ */
+export function changelogSection(markdown, version) {
+  const lines = markdown.split(/\r?\n/);
+  const heading = new RegExp(`^## \\[${version.replace(/\./g, '\\.')}\\](\\s|$)`);
+  const start = lines.findIndex((line) => heading.test(line));
+  if (start === -1) return null;
+  const body = [];
+  for (const line of lines.slice(start + 1)) {
+    if (/^## /.test(line) || /^\[[^\]]+\]:\s/.test(line)) break;
+    body.push(line);
+  }
+  return body.join('\n').trim();
+}
+
+/**
+ * Checks a release tag against package.json's version and the CHANGELOG.
+ * @param {string} tag
+ * @param {string} pkgVersion
+ * @param {string} changelog CHANGELOG.md contents
+ * @returns {{ ok: true, version: string } | { ok: false, error: string }}
+ */
+export function checkTag(tag, pkgVersion, changelog) {
+  const version = versionFromTag(tag);
+  if (!version) return { ok: false, error: `Tag "${tag}" is not a release tag (expected v<major>.<minor>.<patch>).` };
+  if (version !== pkgVersion) {
+    return {
+      ok: false,
+      error: `Tag ${tag} is version ${version}, but package.json says ${pkgVersion}. Bump package.json or fix the tag.`,
+    };
+  }
+  if (changelogSection(changelog, version) === null) {
+    return { ok: false, error: `CHANGELOG.md has no "## [${version}]" section. Add one before tagging.` };
+  }
+  return { ok: true, version };
+}
+
+/**
+ * The "Install on Arcade" notes block, between marker comments.
+ * @param {{ version: string, url: string, sha256: string }} values
+ * @returns {string}
+ */
+export function arcadeBlock({ version, url, sha256 }) {
+  return [
+    BLOCK_START,
+    '### Install on Arcade',
+    '',
+    'In `config/games.php`:',
+    '',
+    '```php',
+    `'version' => '${version}',`,
+    `'download_url' => '${url}',`,
+    `'sha256' => '${sha256}',`,
+    '```',
+    BLOCK_END,
+  ].join('\n');
+}
+
+/**
+ * Notes ending with the block: replaces an existing marked block, or appends one.
+ * @param {string} notes
+ * @param {string} block
+ * @returns {string}
+ */
+export function withArcadeBlock(notes, block) {
+  const text = (notes ?? '').replace(/\r\n/g, '\n');
+  const start = text.indexOf(BLOCK_START);
+  const end = start === -1 ? -1 : text.indexOf(BLOCK_END, start);
+  if (end !== -1) {
+    const before = text.slice(0, start).trimEnd();
+    const after = text.slice(end + BLOCK_END.length).trim();
+    return [before, after, block].filter(Boolean).join('\n\n') + '\n';
+  }
+  const trimmed = text.trimEnd();
+  return (trimmed ? `${trimmed}\n\n${block}` : block) + '\n';
+}
+
+/**
+ * Whether to upload the new archive, given the SHA-256 of the one already attached (if any).
+ * Published archives are never replaced with different contents.
+ * @param {string | null | undefined} existingSha256
+ * @param {string} newSha256
+ * @returns {'upload' | 'skip' | 'conflict'}
+ */
+export function uploadDecision(existingSha256, newSha256) {
+  if (!existingSha256) return 'upload';
+  return existingSha256.toLowerCase() === newSha256.toLowerCase() ? 'skip' : 'conflict';
 }

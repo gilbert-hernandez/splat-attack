@@ -6,5 +6,5 @@ dist/
 test-results/
 playwright-report/
 videos/
-release/
+/release/
 coverage/

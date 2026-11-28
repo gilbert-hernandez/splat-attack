@@ -27,8 +27,9 @@
   - An Endless match and a Ladder match play
   - Portrait works too (narrow the window or use device mode)
   - Checked 2026-11-28: headless load from a sub-path showed `v0.1.10` with no console errors or failed requests; Gilbert played it in the browser and everything works as expected
-- [ ] 5.3 After merging to `master` and green CI: start a dry run (`gh workflow run release.yml --ref master`), confirm it passes, download the artifact (`gh run download`), `sha256sum -c` it, confirm its hash equals a local `npm run package` on the same commit, and confirm `gh release list` is unchanged
-- [ ] 5.4 First real run: push the `v0.1.10` tag. Confirm the pre-release `v0.1.10` has the CHANGELOG notes, the archive, the `.sha256` file and one Install on Arcade block whose `download_url` downloads the archive and whose `sha256` matches. Paste the block into SA-31 for SA-17 (or the Arcade entry) to use
+- [x] 5.3 After merging to `master` and green CI: start a dry run (`gh workflow run release.yml --ref master`), confirm it passes, download the artifact (`gh run download`), `sha256sum -c` it, confirm its hash equals a local `npm run package` on the same commit, and confirm `gh release list` is unchanged
+  - Done 2026-11-28 (run 46158150547): passed, `sha256sum -c` OK, hash `4d8b5cab…920e` equal to a local `npm run package` of 0ac7a38, releases unchanged
+- [ ] 5.4 First real run: push the `v0.1.10` tag. Confirm the pre-release `v0.1.10` has the CHANGELOG notes, the archive, the `.sha256` file and one Install on Arcade block whose `download_url` downloads the archive and whose `sha256` matches. Paste the block into SA-31 for SA-17 (or the Arcade entry) to use. Done after archiving: the v0.1.10 tag goes on the archive commit, and the result is recorded on SA-31
 
 ## 6. Finish
 

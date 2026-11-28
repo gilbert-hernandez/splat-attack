@@ -10,17 +10,20 @@ export const BUCKETS = 400;
 /**
  * A bot by name ('sparring' or 'rival1' to 'rival5'), timed per call.
  * @param {string} name
- * @param {number} seed
+ * @param {number} seed the bot seed
+ * @param {{plain?: boolean}} [options] plain: the rival's variety off
  */
-function makeBot(name, seed) {
+function makeBot(name, seed, options = {}) {
   const sparring = name === 'sparring';
-  const state = sparring ? createSparring() : createRival(name, seed);
+  const state = sparring ? createSparring() : createRival(name, seed, options);
   const bot = {
     worstMs: 0,
     /** @type {number[]} how many calls took each bucket's time */
     times: new Array(BUCKETS + 1).fill(0),
     /** @returns {number | null} null for the sparring rival, which has no budget */
     maxUnits: () => (sparring ? null : /** @type {any} */ (state).maxUnits),
+    /** @type {any} the rival's own state, or null for the sparring rival */
+    rival: sparring ? null : state,
     input(board, opponent) {
       const start = performance.now();
       const input = sparring
@@ -97,4 +100,67 @@ export function playMatch({ pairing, a, b, seed, side }, maxTicks) {
   if (match.outcome === 'draw') winner = 'draw';
   else if (won !== undefined) winner = won === aBoard ? 'a' : 'b';
   return { pairing, seed, side, winner, ticks: match.tick, a: boardOf(aBoard), b: boardOf(bBoard) };
+}
+
+/** How many of the rival's first placements make up its opening. */
+export const OPENING = 8;
+
+/**
+ * @typedef {object} VarietyRecord
+ * @property {number} rival the rival's number
+ * @property {boolean} plain variety off (the baseline)
+ * @property {number} botSeed
+ * @property {'rival' | 'opponent' | 'draw' | 'cut'} winner
+ * @property {number} ticks
+ * @property {string[]} opening the rival's first placements, as sorted `col,row,color` cells
+ * @property {string | null} plan the persona's starting plan
+ * @property {number} switches plan switches
+ * @property {number} rivalScore
+ * @property {number} opponentScore
+ */
+
+/**
+ * One match of the variety run: the rival on the rival's board against a fixed opponent (the rival
+ * below it, plain, on the piece seed; or the sparring rival), on the piece seed, with its own bot seed.
+ * With `stopAfter`, the match stops once the rival has placed that many pairs.
+ * @param {{rival: number, pieceSeed: number, botSeed: number, plain: boolean, stopAfter?: number}} job
+ * @param {number} maxTicks
+ * @returns {VarietyRecord}
+ */
+export function playVariety({ rival, pieceSeed, botSeed, plain, stopAfter = Infinity }, maxTicks) {
+  const match = createVersus(pieceSeed);
+  const opponent = rival === 1 ? makeBot('sparring', 0) : makeBot(`rival${rival - 1}`, pieceSeed, { plain: true });
+  const bot = makeBot(`rival${rival}`, botSeed, { plain });
+  const start = { plan: bot.rival.plan };
+  /** @type {string[]} */
+  const placements = [];
+  while (match.outcome === null && match.tick < maxTicks && placements.length < stopAfter) {
+    const [player, board] = match.boards;
+    const [, events] = stepVersus(match, opponent.input(player, board), bot.input(board, player));
+    for (const event of events) {
+      if (event.type !== 'lock') continue;
+      placements.push(
+        event.cells
+          .map((c) => `${c.col},${c.row},${c.color}`)
+          .sort()
+          .join(';'),
+      );
+    }
+  }
+  let winner = /** @type {VarietyRecord['winner']} */ ('cut');
+  if (match.outcome === 'draw') winner = 'draw';
+  else if (match.outcome === 'loss') winner = 'rival';
+  else if (match.outcome === 'win') winner = 'opponent';
+  return {
+    rival,
+    plain,
+    botSeed,
+    winner,
+    ticks: match.tick,
+    opening: placements.slice(0, OPENING),
+    plan: start.plan,
+    switches: bot.rival.switches,
+    rivalScore: match.boards[1].score,
+    opponentScore: match.boards[0].score,
+  };
 }

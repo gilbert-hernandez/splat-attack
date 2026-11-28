@@ -25,6 +25,9 @@ jobs:
       # Rival strength order: each CPU rival beats the one below it (20 matches per pairing).
       - run: npm run sim -- --quick
 
+      # Rival variety: 200 bot seeds per rival on the same pieces play distinct openings (first 8 pairs).
+      - run: npm run sim -- --variety --quick
+
       - run: npx playwright install --with-deps chromium
 
       - run: npm run build

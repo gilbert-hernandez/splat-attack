@@ -32,8 +32,8 @@ See proposal.md, Why, for the measured baseline. Current state after SA-10:
 | `src/config/rivals.js` | Each profile gains `vary`, `adapt` and `margin`. A shared `PLANS` table (in the same file, since profiles may not import) holds each plan's overlay |
 | `src/ai/persona.js` | New: `drawPersona(profile, rng)` and `pairProfile(profile, persona, plan, reading)`, which returns the weights, `fire` and `margin` to plan this pair with |
 | `src/ai/rival.js` | `createRival(id, seed, {plain})`, persona and plan state, the per-tick chain watch, plan failure and switching, validation of the new fields |
-| `src/ai/planner.js` | The job reads the boards first (its first units), then searches with the pair's profile. `pick` honors the margin |
-| `src/ai/evaluate.js` | `rateShape` gains the `area` and `colorLinks` terms. A `longestChain(grid)` helper yields one unit per probe step, reused for both boards |
+| `src/ai/planner.js` | The job searches, then runs extra work (the reading) with the units left. `pick` honors the margin |
+| `src/ai/evaluate.js` | `rateShape` gains the `colorLinks` term, and `rateArea` nudges first moves toward the persona's side. A `longestChain(grid)` helper yields one unit per probe step, reused for both boards |
 | `src/ai/view.js` | `seen()` also copies the own board's `chain` |
 
 ### 2. The bot seed
@@ -52,42 +52,56 @@ Drawn once, in `createRival`, before anything else touches the stream, with a fi
 | `risk` | integer in `vary.risk` (e.g. −1…1) | `fire.at` += risk (kept ≥ 1); `height` and `spawnColumn` scaled by `100 − risk × vary.riskPercent` % |
 | `patience` | integer in `vary.patience` ticks | `pace.dropDelay` += patience (kept ≥ 0). `actEvery` never varies, because pace drives strength most |
 | `colors` | 1 or 2 distinct colors (count from `vary.colors`) | `colorLinks` weight = draw in `vary.colorBonus`, per neighbor pair of a preferred color |
-| `area` | left (col 0), center (col 3) or right (col 6) | `area` weight = draw in `vary.areaBonus`, per visible blob × `(3 − |col − center|)` |
+| `area` | left (col 0), center (col 3) or right (col 6) | `area` weight = draw in `vary.areaBonus`, for a first move only: per cell of the landed pair in the lower half of the board × `max(0, 3 − |col − area|)` |
 
-`PLANS` overlays are integer percentages on weights plus a `fire.at` shift:
+`PLANS` overlays are integer percentages on weights plus a `fire.at` shift. A rival's **signature plan** (its most likely starting plan) uses no overlay, because its SA-10 profile is already tuned for that style; only the other plans change it:
 
-| Plan | Overlay (working values, tuned in task 4) |
+| Plan | Overlay |
 |---|---|
-| build | `chainSetup` 150%, `attack` 80%, `fire.at` +1 |
-| rush | `chainSetup` 50%, `attack` 140%, `cancel` 120%, `fire.at` set to 1 |
-| paint | `stainMatch` 170%, `stainSetup` 200%, `chainSetup` 80% |
+| build | `chainSetup` 130%, `attack` 90%, `fire.at` +1 |
+| rush | `chainSetup` 70%, `attack` 125%, `cancel` 115%, `fire.at` set to 1 |
+| paint | `stainMatch` 150%, `stainSetup` 160%, `chainSetup` 90% |
 
-Signature plans: BUILDER build, RUSHER rush, PAINTER paint. ROOKIE and ACE spread their plan weights more evenly, but each still has a most likely plan (ROOKIE rush, ACE build). `validateRivals` checks that plan weights add up to 100, that every range is `[min, max]` with integers and `min ≤ max`, and that `margin` and every `adapt` value is a non-negative integer.
+*Tried first:* overlays on every plan, signature included, at 150/80, 50/140/120 and 170/200/80. The PAINTER on its own paint overlay played far worse than its tuned profile (with adaptation, margin and switching off, 67% against 80% without overlays on the same 100 matches). Rejected.
+
+Signature plans: ROOKIE rush, RUSHER rush, PAINTER paint, BUILDER build, ACE build. `validateRivals` checks that plan weights add up to 100, that every range is `[min, max]` with integers and `min ≤ max`, and that `margin` and every `adapt` value is a non-negative integer.
+
+**Final values** (after task 4.2; all in `src/config/rivals.js`). Every rival: `risk` [−1, 1], `colors` [1, 2], `highStack` 10, `dryPairs` 8, `hold` 6, `openCells` 24, `gapPoints` 3000.
+
+| Rival | Plans (build/rush/paint) | riskPercent | patience | colorBonus | areaBonus | margin | adapt (threat/meter/gap/gunk) |
+|---|---|---|---|---|---|---|---|
+| ROOKIE | 10/60/30 | 15 | [−10, 10] | [2, 6] | [2, 4] | 0 | 10/10/10/10 |
+| RUSHER | 15/65/20 | 15 | [−4, 4] | [2, 8] | [2, 6] | 8 | 20/15/15/20 |
+| PAINTER | 20/15/65 | 15 | [−6, 6] | [2, 8] | [2, 6] | 9 | 0/15/0/20 |
+| BUILDER | 65/15/20 | 10 | [−6, 6] | [2, 8] | [2, 6] | 20 | 0/20/20/25 |
+| ACE | 45/30/25 | 10 | [−2, 2] | [2, 8] | [2, 6] | 20 | 30/25/25/30 |
+
+The PAINTER and BUILDER ignore the player's threat (and the PAINTER the score gap): with those reactions on, the PAINTER lost about 8 points of win rate, and the BUILDER's matches grew longer, pushing the opponent's score spread to 134% of plain. Keeping to their plan under pressure suits both styles.
 
 ### 4. Near-tie pick
 
 `pick(job, rank, margin)`. Among non-fatal roots ordered as now, every root whose score is within `margin` of the best (at the best's depth) joins a tie group. The draw:
 
 1. Draw the rank with `pickWeights` as now (one stream draw).
-2. If the rank is 0 and the tie group has more than one move, draw one of them uniformly (a second draw). Ranks 1 and up count from the first move after the tie group, so rank 1 is the best move outside the margin.
+2. If the rank is 0 and the tie group has more than one move, choose one of them with a second draw. Ranks 1 and up count from the first move after the tie group, so rank 1 is the best move outside the margin.
 
-So the stream advances once or twice per pair, but always the same way for the same state. `margin` 0 gives exactly SA-10's pick. Working margins: ROOKIE 0 (already varied), RUSHER and PAINTER about 1 link's value, BUILDER and ACE about 2 links'. The final numbers come from task 4.
+In practice the tie draw is made at every spawn (a second stream draw, made whether or not there is a tie), so the stream advances exactly twice per pair with variety on, and once in `plain`. `margin` 0 gives exactly SA-10's pick. The margin applies only while the board holds at most `vary.openCells` (24) cells; on a crowded board near-ties cost real points. *Tried first:* the margin at every pair. The ACE needed a margin of 20 for 95% distinct openings, but at every pair it cost about 10 points of win rate; at 14 its openings fell to 94%. Final margins: ROOKIE 0, RUSHER 8, PAINTER 9, BUILDER 20, ACE 20 (see the table in section 3).
 
 *Alternative:* softmax over scores. It needs fractions or exponent tables, and it lets a poor move through on a flat board. Rejected for the integer margin.
 
-### 5. Reading the boards: the job's first units
+### 5. Reading the boards: with the units left after the search
 
-`startPlan(seen, profile, persona, state)` builds a job whose generator first does the reading, then the search:
+`startPlan(seen, profile, after)` runs the search, sets `job.searched`, then runs `after`, the rival's reading, with the units left in later ticks while it steers and drops:
 
 1. **Own setup:** `longestChain(seen.grid)`, one unit per probe step, as chain setup costs now.
 2. **Player threat:** `longestChain(seen.opponent.grid)`, the same way.
-3. Counts that cost nothing extra: the player's stack height, the player's blobs resting on matching stains, the own blobs on matching stains, the score gap, pending gunk, whether the player's meter is full.
-4. **Plan check** (section 7), then `pairProfile(...)` builds this pair's weights.
-5. The search, unchanged, with those weights.
+3. Counts that cost nothing extra: the player's tallest column, the player's blobs resting on matching stains, the score gap, pending gunk, whether the player's meter is full, and the longest chain fired on its own board since the last reading.
 
-Before the reading finishes there's no `best` move, so the bot sends nothing for those ticks. Reading costs at most a few dozen units, so even the ROOKIE (6 units a tick) loses only a few ticks of a pair. The danger Rinse doesn't wait for the job, as now.
+The reading is stored on the bot only when it finishes. If the pair locks first, the previous reading stays. At the next spawn the bot checks its plan against the new reading (section 7), builds the pair's profile with `pairProfile(...)` for free, and starts the search with it. So adaptation lags by one pair, about a second of play.
 
-`plain` mode skips steps 1–4, so the job's units are identical to SA-10.
+*Alternative, tried first:* reading as the job's first units, before the search. The rival then had no move at all for the first few ticks of every pair, and on a tall stack the pair could lock in the spawn column before the reading was done. With every other variety feature off, the PAINTER fell from 90% to 73% against the RUSHER on the same matches. Rejected.
+
+`plain` mode passes no `after`, so the job's units are identical to SA-10.
 
 ### 6. Adaptation
 
@@ -95,10 +109,12 @@ Before the reading finishes there's no `best` move, so the bot sends nothing for
 
 | Signal | Reading | Change (scaled by the profile's `adapt.<signal>` %) |
 |---|---|---|
-| threat | `pressure` = 25 × player's longest chain (cap 4) + 5 × player's stain-resting blobs, cap 100 | `fire.smallPercent` moves toward 100 by `pressure × adapt.threat / 100`; `height` grows by the same %; at pressure ≥ 75, `fire.at` −1 |
+| threat | `pressure` = 25 × player's longest chain (cap 4) + 2 × player's stain-resting blobs + 4 × rows of the player's tallest column past half the board, cap 100 | `fire.smallPercent` moves toward 100 by `pressure × adapt.threat / 100`; `height` grows by the same %; at pressure ≥ 75, `fire.at` −1 |
 | meter | player's meter full and the player has no pending gunk | `attack` −`adapt.meter` %, `chainSetup` +`adapt.meter` % |
 | gap | `gap` = player score − own score, compared with `adapt.gapPoints` | behind by more: `fire.at` +1, `chainSetup` +`adapt.gap` %; ahead by more: `fire.at` −1, `height` +`adapt.gap` % |
 | gunk | own pending gunk `g` | `cancel` +`min(g, 14) × adapt.gunk / 7` %; at `g` ≥ 7, `fire.at` −1 |
+
+All percentages round to the nearest integer, halves away from zero, so a small weight like `height: -2` still moves under a large enough change.
 
 `fire.at` is kept at 1 or more throughout. The ROOKIE's `adapt` values are small, so it stays naive. The ACE adapts most.
 
@@ -108,8 +124,8 @@ Before the reading finishes there's no `best` move, so the bot sends nothing for
 
 The bot keeps `setup` (own longest chain at the last pair start) and `fired` (the largest `chain` seen on its board since then, read every tick before the phase check). At each pair start, with the new reading:
 
-- **build** fails if `setup − longest ≥ 2` and `fired < setup − 1`, or the tallest column reaches `vary.highStack` rows.
-- **paint** fails if no own blob has rested on a matching stain for `vary.dryPairs` pairs in a row.
+- **build** fails if `setup ≥ 4`, `setup − longest ≥ 2` and `fired < setup − 1`, or the tallest column reaches `vary.highStack` rows. (`setup` and `fired` come from the last two readings.)
+- **paint** fails if no own blob has rested on a matching stain for `vary.dryPairs` pairs in a row, counting only pairs while the board has stains.
 - **rush** fails only on the high stack.
 
 A failure draws the new plan from the profile's `vary.plans` weights with the current plan left out (one stream draw), and starts `hold` = `vary.hold` pairs during which no failure is checked. Switches are counted on the bot for the sim. Nothing switches the plan back on its own.
@@ -120,7 +136,7 @@ A failure draws the new plan from the profile's `vary.plans` weights with the cu
 - **Jobs.** For each rival `n` and `i` in `0…matches−1`: `{rival: n, botSeed: SIM.varietyBotSeed + i, pieceSeed, plain}` twice (varied and baseline), or once (varied) with `--quick`. The opponent is `rival(n−1)` created `plain` with bot seed `pieceSeed`, or sparring for rival 1. The rival is always on board 1, as in the game.
 - **Match.** `playMatch` gains bot options (`botSeed`, `plain`) and `stopAfter` (the rival's lock count), and records the rival's first 8 lock events as placement keys (sorted `col,row,color` cells), its persona plan, plan switches, and both scores.
 - **Metrics.** Distinct openings is the size of the set of joined first-8 keys divided by the matches. Overlap is, over all pairs of matches, the count of equal keys at the same index divided by 8, averaged. Both are pure functions in `simCore.js`, with unit tests on made-up key lists.
-- **Checks.** As in the spec, from `SIM.variety` (`distinctPercent` 95, `overlapPercent` 50, `winBand` 10, `scoreBandPercent` 15, `spreadRatio` 125). All percentages are compared in floating point, since the sim isn't pure.
+- **Checks.** As in the spec, from `SIM.variety` (`distinctPercent` 95, `overlapPercent` 50, `winBand` 10, `scoreBandPercent` 15 on the opponent's points per minute, `spreadPercent` 125 on its score's standard deviation). The score band was first on the opponent's average total. The first tuned full run failed it for the BUILDER (+109%) and ACE (+42%), almost all from longer matches: per minute the shift was +4% to +12%. Gilbert chose points per minute (2026-11-27). All percentages are compared in floating point, since the sim isn't pure.
 - **Workers.** The same round-robin dealing, gathered by rival, mode and bot seed, so the results don't depend on the worker count.
 - **CI.** `- run: npm run sim -- --variety --quick` after the quick strength sim.
 

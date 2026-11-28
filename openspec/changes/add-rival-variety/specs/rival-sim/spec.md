@@ -29,7 +29,7 @@ For each rival, the variety run SHALL report:
 - the share of matches with a distinct opening, where an opening is the sequence of the rival's first 8 placements and a placement is the cells and colors of its locked pair
 - the opening overlap: over every pair of matches, the average share of the first 8 pairs placed identically
 - its win rate, with variety and in the baseline
-- its average score, and the opponent's average score and standard deviation, with variety and in the baseline
+- its average score, and the opponent's average score, standard deviation and points per minute of play, with variety and in the baseline
 - each starting plan's share of matches and win rate, and the average plan switches per match, as information
 
 #### Scenario: Report printed
@@ -41,7 +41,7 @@ The variety run SHALL check, for each rival:
 - at least 95% of its matches have a distinct opening
 - its opening overlap is below 50%
 - its win rate is within 10 percentage points of its baseline win rate
-- the opponent's average score is within 15% of the baseline's, and the opponent's standard deviation is at most 1.25 times the baseline's
+- the opponent's points per minute of play are within 15% of the baseline's, and the standard deviation of the opponent's score is at most 1.25 times the baseline's. Points per minute, not the average total, because a rival that survives longer lets the opponent bank more points at the same rate, and the strength band already covers how long a rival survives
 
 It SHALL exit non-zero and name each failing check and rival when a check fails.
 

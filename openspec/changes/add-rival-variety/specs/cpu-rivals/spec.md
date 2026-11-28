@@ -16,7 +16,7 @@ There SHALL be five CPU rivals, `rival1` to `rival5`, each with a style name and
 - **THEN** loading the profiles fails with an error naming the rival
 
 ### Requirement: Board evaluation and lookahead
-A rival SHALL choose each move by trying placements of its falling pair and of up to its lookahead in preview pairs, and simulating each with the game's own gravity, splat, stain and gunk rules. It SHALL rate each result with its current weights: its profile's, as shifted by its persona and its adaptation. While its meter is full, it SHALL also rate firing Rinse and firing Bomb from each column it could aim at. It SHALL then make a seeded weighted choice among its highest-rated moves, treating every move rated within its profile's margin of the best move as equally good, and steer the pair there with per-tick inputs. It SHALL never choose a move that tops out while another move doesn't.
+A rival SHALL choose each move by trying placements of its falling pair and of up to its lookahead in preview pairs, and simulating each with the game's own gravity, splat, stain and gunk rules. It SHALL rate each result with its current weights: its profile's, as shifted by its persona and its adaptation. While its meter is full, it SHALL also rate firing Rinse and firing Bomb from each column it could aim at. It SHALL then make a seeded weighted choice among its highest-rated moves, treating every move rated within its profile's margin of the best move as equally good while its board is open (holds at most a set number of cells), and steer the pair there with per-tick inputs. It SHALL never choose a move that tops out while another move doesn't.
 
 #### Scenario: Takes a splat
 - **WHEN** a rival with lookahead 1 has a board where one placement splats four blobs and no other placement splats
@@ -25,6 +25,10 @@ A rival SHALL choose each move by trying placements of its falling pair and of u
 #### Scenario: Looks ahead
 - **WHEN** a rival with lookahead 2 has a board where the best two-pair sequence needs the first pair placed somewhere that scores nothing by itself
 - **THEN** it places the first pair there, and a lookahead-1 rival given the same board doesn't
+
+#### Scenario: No free choice on a crowded board
+- **WHEN** a rival's board holds more cells than its profile's open-board limit
+- **THEN** it chooses by its rank weights alone, as without a margin
 
 #### Scenario: Near-ties vary
 - **WHEN** a rival's best moves on an open board are rated within its margin of each other, and it plays that board with many bot seeds
@@ -82,7 +86,11 @@ At the start of each match, a rival SHALL draw a persona from its own seeded str
 - **THEN** the one preferring the left places more blobs in the left half over its first 8 pairs than the one preferring the right
 
 ### Requirement: Mid-match adaptation
-Before planning each pair, a rival SHALL adjust its weights from what it can see. It SHALL react to the player's threat (the longest chain one more blob could set off on the player's board, and the player's stack height), to how many of the player's blobs sit on matching stains, to whether the player's meter is full, to the score gap, and to its own pending gunk. How much it reacts SHALL be set by its profile. Adaptation SHALL use only what a player could see.
+A rival SHALL plan each pair with weights adjusted to its last complete reading of both boards. It SHALL take each reading with the work units left over once a pair's plan is done, so reading never delays a move, and SHALL keep the previous reading when a pair locks before the reading is done. It SHALL react to the player's threat (the longest chain one more blob could set off on the player's board, and the player's stack height), to how many of the player's blobs sit on matching stains, to whether the player's meter is full, to the score gap, and to its own pending gunk. How much it reacts SHALL be set by its profile. Adaptation SHALL use only what a player could see.
+
+#### Scenario: Reading never delays a move
+- **WHEN** a rival starts planning a pair
+- **THEN** its first work unit goes to the search, and it reads the boards only after the search is done
 
 #### Scenario: Under threat
 - **WHEN** the player's board has a chain of 4 or more ready to set off and the rival has a smaller chain ready
@@ -101,7 +109,7 @@ Before planning each pair, a rival SHALL adjust its weights from what it can see
 - **THEN** it values cancelling more, and fires shorter chains, than with no pending gunk
 
 ### Requirement: Dropping failed plans
-A rival SHALL notice when its plan fails and switch to another plan its profile allows. A build plan SHALL fail when the longest chain the rival had set up shrinks by two or more steps without a chain of at least that length minus one being fired, or when its stack is too high to keep building. A paint plan SHALL fail when none of the rival's blobs has rested on a stain of its own color for a set number of pairs. A rush plan SHALL fail only when the stack is too high. After switching, the rival SHALL keep the new plan for at least a set number of pairs. A rival SHALL NOT switch plans without one of these failures.
+A rival SHALL notice when its plan fails and switch to another plan its profile allows. A build plan SHALL fail when the longest chain the rival had set up, if it was 4 or more, shrinks by two or more steps without a chain of at least that length minus one being fired, or when its stack is too high to keep building. A paint plan SHALL fail when none of the rival's blobs has rested on a stain of its own color for a set number of pairs while its board has stains; pairs before its board has any stain don't count. A rush plan SHALL fail only when the stack is too high. After switching, the rival SHALL keep the new plan for at least a set number of pairs. A rival SHALL NOT switch plans without one of these failures.
 
 #### Scenario: Buried chain
 - **WHEN** a rival on a build plan has a chain of 4 set up, and gunk lands on it so that only a chain of 2 or less remains

@@ -13,4 +13,18 @@ export const SIM = {
   baselinePercent: 50,
   quickPercent: 50,
   maxWorkers: 4,
+  // `--variety`: bot seeds per rival (firstBotSeed, firstBotSeed + 1, ...) on one piece seed, and the
+  // checks. distinctPercent and overlapPercent are the opening targets (the quick run checks only
+  // those); winBand is in percentage points from the plain baseline; scoreBandPercent bounds the
+  // opponent's points per minute of play, and spreadPercent the standard deviation of its score, as
+  // percentages of the plain baseline's.
+  variety: {
+    matches: 200,
+    firstBotSeed: 1000,
+    distinctPercent: 95,
+    overlapPercent: 50,
+    winBand: 10,
+    scoreBandPercent: 15,
+    spreadPercent: 125,
+  },
 };

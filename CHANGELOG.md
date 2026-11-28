@@ -4,6 +4,21 @@ All notable changes to Splat Attack. The format follows [Keep a Changelog](https
 
 Versioning is [SemVer](https://semver.org/) 0.x. Each Dev ticket bumps the patch, and the last ticket of a milestone bumps the minor (M1 = 0.1.0, M2 = 0.2.0, M3 = 0.3.0). Ticket numbers (SA-n) refer to the Splat Attack project in Vikunja.
 
+## [0.1.9] - 2026-11-27
+
+### Added
+
+- **A persona per match** (SA-11): every match, each rival draws a persona within its profile's ranges: a starting plan (build, rush or paint), how much risk it takes, how patient it is before dropping, one or two favorite colors and a favorite side of the board. Each rival still plays its own style: on its signature plan (the BUILDER's build, the RUSHER's rush, the PAINTER's paint) it plays exactly as tuned.
+- **Varied openings** (SA-11): on an open board, moves rated almost as well as the best are a free choice, so the stronger rivals no longer repeat their openings. With the same pieces, the ACE now plays a different first 8 pairs in 99% of matches (20% before).
+- **Adapting during a match** (SA-11): with the work units left after planning a pair, a rival reads both boards and plans its next pair around your chain threat and stack, your full meter, the score gap and its incoming gunk. How much each rival reacts is in its profile; the PAINTER and BUILDER keep to their plans under pressure. Reading never delays a move.
+- **Dropping failed plans** (SA-11): a rival switches plans when a big chain it was building gets buried, its stack gets too high, or its painting dries up.
+- **`npm run sim -- --variety`** (SA-11): each rival plays 200 matches on the same pieces against the same opponent, changing only its bot seed, and again with its variety off. It checks for at least 95% distinct 8-pair openings, overlap below 50%, a win rate within 10 points of the rival without variety, and an opponent scoring rate (points per minute) within 15% and score spread within 125% of it. CI runs the quick version (openings only).
+
+### Changed
+
+- **Bot seed** (SA-11): a rival's random choices now come from a bot seed. In the game it is the match seed, so replays still need only the seed and the inputs. With variety off (`plain`), a rival plays exactly as in 0.1.8.
+- **Replays:** unchanged. The format and every stored hash stay the same.
+
 ## [0.1.8] - 2026-11-26
 
 ### Added

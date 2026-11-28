@@ -11,6 +11,23 @@
 // - weights: what a board is worth. Signed; see src/ai/evaluate.js for each term.
 // - meter: always Rinse once rinseAt gunk is pending; rinseBias and bombBias are added to the value of
 //   every Rinse and Bomb move.
+//
+// Variety (SA-11; src/ai/persona.js). None of it applies to a `plain` rival, which plays as in SA-10.
+// - margin: first moves rated within this many points of the best count as equally good, and the
+//   rival draws one of them, while its board is open (at most vary.openCells blobs and gunk).
+// - vary: the ranges each match's persona is drawn from, [min, max] inclusive.
+//   - plans: the chance, out of 100, of starting with each plan in PLANS. The most likely is the
+//     rival's signature plan.
+//   - risk: added to fire.at; height and spawnColumn shrink by riskPercent per step of risk.
+//   - patience: ticks added to pace.dropDelay.
+//   - colors: how many preferred colors; colorBonus: per same-color link of a preferred color.
+//   - areaBonus: for a first move only, per cell of the pair landing in the lower half of the board,
+//     times its closeness (0 to 3) to the preferred side.
+//   - highStack: a build or rush plan fails at this column height; dryPairs: a paint plan fails
+//     after this many pairs with no blob on a matching stain; hold: pairs a new plan is kept.
+//   - openCells: the margin applies while the board holds at most this many cells.
+// - adapt: how strongly it reacts, in percent, to the player's threat, the player's full meter, the
+//   score gap (beyond gapPoints) and its own pending gunk.
 export const RIVALS = [
   {
     id: 'rival1',
@@ -35,6 +52,21 @@ export const RIVALS = [
       gunk: -4,
     },
     meter: { rinseAt: 18, rinseBias: -200, bombBias: -400 },
+    margin: 0,
+    vary: {
+      plans: { build: 10, rush: 60, paint: 30 },
+      risk: [-1, 1],
+      riskPercent: 15,
+      patience: [-10, 10],
+      colors: [1, 2],
+      colorBonus: [2, 6],
+      areaBonus: [2, 4],
+      highStack: 10,
+      dryPairs: 8,
+      hold: 6,
+      openCells: 24,
+    },
+    adapt: { threat: 10, meter: 10, gap: 10, gapPoints: 3000, gunk: 10 },
   },
   {
     id: 'rival2',
@@ -59,6 +91,21 @@ export const RIVALS = [
       gunk: -8,
     },
     meter: { rinseAt: 10, rinseBias: 0, bombBias: 60 },
+    margin: 8,
+    vary: {
+      plans: { build: 15, rush: 65, paint: 20 },
+      risk: [-1, 1],
+      riskPercent: 15,
+      patience: [-4, 4],
+      colors: [1, 2],
+      colorBonus: [2, 8],
+      areaBonus: [2, 6],
+      highStack: 10,
+      dryPairs: 8,
+      hold: 6,
+      openCells: 24,
+    },
+    adapt: { threat: 20, meter: 15, gap: 15, gapPoints: 3000, gunk: 20 },
   },
   {
     id: 'rival3',
@@ -83,6 +130,21 @@ export const RIVALS = [
       gunk: -8,
     },
     meter: { rinseAt: 10, rinseBias: 0, bombBias: 80 },
+    margin: 9,
+    vary: {
+      plans: { build: 20, rush: 15, paint: 65 },
+      risk: [-1, 1],
+      riskPercent: 15,
+      patience: [-6, 6],
+      colors: [1, 2],
+      colorBonus: [2, 8],
+      areaBonus: [2, 6],
+      highStack: 10,
+      dryPairs: 8,
+      hold: 6,
+      openCells: 24,
+    },
+    adapt: { threat: 0, meter: 15, gap: 0, gapPoints: 3000, gunk: 20 },
   },
   {
     id: 'rival4',
@@ -107,6 +169,21 @@ export const RIVALS = [
       gunk: -8,
     },
     meter: { rinseAt: 8, rinseBias: 100, bombBias: -80 },
+    margin: 20,
+    vary: {
+      plans: { build: 65, rush: 15, paint: 20 },
+      risk: [-1, 1],
+      riskPercent: 10,
+      patience: [-6, 6],
+      colors: [1, 2],
+      colorBonus: [2, 8],
+      areaBonus: [2, 6],
+      highStack: 10,
+      dryPairs: 8,
+      hold: 6,
+      openCells: 24,
+    },
+    adapt: { threat: 0, meter: 20, gap: 20, gapPoints: 3000, gunk: 25 },
   },
   {
     id: 'rival5',
@@ -131,5 +208,30 @@ export const RIVALS = [
       gunk: -10,
     },
     meter: { rinseAt: 8, rinseBias: 40, bombBias: 0 },
+    margin: 20,
+    vary: {
+      plans: { build: 45, rush: 30, paint: 25 },
+      risk: [-1, 1],
+      riskPercent: 10,
+      patience: [-2, 2],
+      colors: [1, 2],
+      colorBonus: [2, 8],
+      areaBonus: [2, 6],
+      highStack: 10,
+      dryPairs: 8,
+      hold: 6,
+      openCells: 24,
+    },
+    adapt: { threat: 30, meter: 25, gap: 25, gapPoints: 3000, gunk: 30 },
   },
 ];
+
+// Each plan's overlay on a rival's weights: percentages of the profile's weights, and a change to
+// fire.at (fireShift is added; fireSet, when not 0, replaces it). Applied before the persona's risk,
+// and only when the plan isn't the rival's signature plan (its most likely one), which its profile
+// is already tuned for.
+export const PLANS = {
+  build: { weights: { chainSetup: 120, attack: 95 }, fireShift: 1, fireSet: 0 },
+  rush: { weights: { chainSetup: 80, attack: 120, cancel: 110 }, fireShift: -1, fireSet: 0 },
+  paint: { weights: { stainMatch: 140, stainSetup: 140, chainSetup: 95 }, fireShift: 0, fireSet: 0 },
+};

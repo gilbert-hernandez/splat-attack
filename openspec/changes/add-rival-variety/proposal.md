@@ -21,9 +21,9 @@ The ACE plays the same opening four times in five. It also ignores the player: i
   - **Risk:** how high it lets its stack get, and how long a chain it holds out for.
   - **Patience:** how long it waits before soft-dropping a pair that's in place.
   - **Preferred colors:** one or two colors whose groups it values a little more.
-  - **Area:** the side of the board it likes to build on (left, center or right).
+  - **Area:** the side of the board it likes to place its pairs on (left, center or right), while the lower half there is open.
 - **Near-ties are a free choice.** Moves rated within a small margin of the best one count as equally good, and the rival draws among them. On an open board many placements are almost equal, so the strong rivals vary most where it costs least. The existing rank weights still apply below that.
-- **Adapts during the match.** Before each pair, the rival reads the visible boards and adjusts its persona's weights:
+- **Adapts during the match.** Once a pair's plan is done, the rival uses its spare work units to read the visible boards, and plans its next pair with weights adjusted to that reading (so reading never delays a move):
   - **Player threat:** the longest chain one more blob could set off on the player's board, and the player's stack height. A big threat makes it fire smaller chains sooner and keep its stack lower.
   - **Player stains:** how much of the player's board sits on matching stains. More means bigger attacks are coming, which counts as a threat too.
   - **Player meter:** while the player's meter is full, a Rinse could wipe out an attack, so attacking is worth less and building is worth more.
@@ -35,7 +35,7 @@ The ACE plays the same opening four times in five. It also ignores the player: i
   - **Distinct openings:** at least 95% of the 200 matches have a different sequence of their first 8 placements. A placement is the cells and colors of the locked pair.
   - **Opening overlap:** across every pair of matches, the average share of the first 8 pairs placed identically is below 50%. Both targets are the plan's proposed numbers, confirmed here. Overlap is measured over the opening only, because after the boards diverge, matching placements mostly happen by chance (the SA-10 rivals already score 4–24% over 40 pairs).
   - **Strength band:** its win rate is within 10 points of the baseline's.
-  - **Player-score band:** the opponent's average score is within 15% of the baseline's, and its spread (standard deviation) is at most 1.25 times the baseline's. The opponent stands in for the player, so this checks that a player's score doesn't depend much on which persona they meet.
+  - **Player-score band:** the opponent's points per minute of play are within 15% of the baseline's, and the spread (standard deviation) of its score is at most 1.25 times the baseline's. The opponent stands in for the player, so this checks that a player's score doesn't depend much on which persona they meet. (Changed from the average total during tuning, with Gilbert's OK: variety makes the BUILDER's and ACE's matches longer, so the opponent banks more points at the same rate, while the strength band already covers survival.)
 
   The report also shows each starting plan's win rate and how often plans switch, as information.
 - **The regular sim keeps its checks with variety on.** `npm run sim` plays the rivals as the game does, so the neighbor checks (60%) now cover varied rivals.
@@ -71,5 +71,5 @@ None. Variety and adaptation are rival behavior, so they extend `cpu-rivals`. Th
   - Tests: unit tests for the persona, the adaptation and the variety metrics; the style test runs with variety on
   - Docs: `README.md`, `CHANGELOG.md`, `package.json` (0.1.9)
 - Scenes change only where `createRival` is called. MatchScene keeps passing the match seed, so the game takes the bot seed from it.
-- Rival play changes, so any e2e test that depends on a rival's exact moves may need new expectations. The landscape fixture shouldn't change, because nothing on screen moves.
+- Rival play changes, so any e2e test that depends on a rival's exact moves may need new expectations. The landscape fixture changes only where the rival's falling pair is at its snapshot tick (the ROOKIE's persona shifts its drop timing); every layout place stays the same.
 - No new dependencies and no new asset keys.

@@ -176,17 +176,21 @@ export function rateMove(
  * - spawnColumn: per square of the spawn column's height
  * - gunk: per gunk on the board
  * - stainSetup: per blob resting on its own color's stain
+ * With a persona's preferences (SA-11):
+ * - colorLinks: per pair of same-color neighbors of a preferred color, on top of links
  * A topped-out board is FATAL.
  * @param {Board} board
  * @param {number} pending
  * @param {Record<string, number>} weights
+ * @param {Prefs | null} [prefs]
  */
-export function rateShape({ grid, stains }, pending, weights) {
+export function rateShape({ grid, stains }, pending, weights, prefs = null) {
   if (blocked(grid)) return FATAL;
   let links = 0;
   let filled = pending;
   let gunk = 0;
   let onStain = 0;
+  let liked = 0;
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLUMNS; col++) {
       const value = cellAt(grid, col, row);
@@ -198,18 +202,75 @@ export function rateShape({ grid, stains }, pending, weights) {
       }
       if (row < RULES.hiddenRows) continue;
       if (cellAt(stains, col, row) === value) onStain++;
-      if (col + 1 < COLUMNS && cellAt(grid, col + 1, row) === value) links++;
-      if (row + 1 < ROWS && cellAt(grid, col, row + 1) === value) links++;
+      let joined = 0;
+      if (col + 1 < COLUMNS && cellAt(grid, col + 1, row) === value) joined++;
+      if (row + 1 < ROWS && cellAt(grid, col, row + 1) === value) joined++;
+      links += joined;
+      if (prefs && prefs.colorMask & (1 << value)) liked += joined;
     }
   }
   const spawn = heightOf(grid, SPAWN.col);
-  return (
+  const shape =
     weights.links * links +
     weights.height * filled +
     weights.spawnColumn * spawn * spawn +
     weights.gunk * gunk +
-    weights.stainSetup * onStain
-  );
+    weights.stainSetup * onStain;
+  return prefs ? shape + weights.colorLinks * liked : shape;
+}
+
+/**
+ * A persona's nudge toward its side of the board, for a first move only: `area` per cell of the
+ * landed pair in the lower half of the board, times its closeness to the preferred column (3 at it,
+ * 0 three or more columns away). Only the placement counts, not the board, so it shapes openings
+ * without rewarding a tall stack on one side.
+ * @param {import('../core/pair.js').Pair} pair landed
+ * @param {Prefs} prefs
+ * @param {number} weight
+ */
+export function rateArea(pair, prefs, weight) {
+  const low = RULES.hiddenRows + (RULES.visibleRows >> 1);
+  const other = otherCell(pair);
+  let near = 0;
+  for (const { col, row } of [pair, other]) if (row >= low) near += Math.max(0, 3 - Math.abs(col - prefs.areaCol));
+  return weight * near;
+}
+
+/**
+ * A persona's board preferences.
+ * @typedef {object} Prefs
+ * @property {number} areaCol the preferred column: 0 (left), 3 (center) or 6 (right)
+ * @property {number} colorMask bit `1 << color` set for each preferred color
+ */
+
+/** The tallest column's height in cells. */
+export function tallest(grid) {
+  let most = 0;
+  for (let col = 0; col < COLUMNS; col++) most = Math.max(most, heightOf(grid, col));
+  return most;
+}
+
+/** How many visible blobs rest on a stain of their own color. */
+export function onStains({ grid, stains }) {
+  let count = 0;
+  for (let row = RULES.hiddenRows; row < ROWS; row++) {
+    for (let col = 0; col < COLUMNS; col++) {
+      const value = cellAt(grid, col, row);
+      if (value !== EMPTY && !isGunk(value) && cellAt(stains, col, row) === value) count++;
+    }
+  }
+  return count;
+}
+
+/**
+ * The longest chain one more blob could set off on a board, yielding once per probe step, so the
+ * reading costs work units like chain setup does.
+ * @returns {Generator<undefined, number, undefined>}
+ */
+export function* longestChain(grid) {
+  let longest = 0;
+  for (const probe of probes(grid)) longest = Math.max(longest, yield* probeSteps(grid, probe));
+  return longest;
 }
 
 /** A column's height in cells. Gravity leaves no gaps, so it's the filled count. */

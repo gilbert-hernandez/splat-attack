@@ -40,7 +40,9 @@ describe('CPU rivals', () => {
         lastAction = match.tick;
       }
       if (input & INPUT.SOFT_DROP) {
-        expect(bot.waited).toBeGreaterThanOrEqual(pace.dropDelay);
+        // The persona's patience shifts the profile's drop delay.
+        expect(bot.waited).toBeGreaterThanOrEqual(bot.dropDelay);
+        expect(Math.abs(bot.dropDelay - pace.dropDelay)).toBeLessThanOrEqual(10);
         drops++;
       }
     });

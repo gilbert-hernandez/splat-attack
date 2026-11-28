@@ -7,6 +7,7 @@ import {
   placements,
   probeSteps,
   probes,
+  rateArea,
   rateChainSetup,
   rateMove,
   rateShape,
@@ -39,7 +40,15 @@ import {
  */
 
 /**
+ * A profile to plan with: a rival's, or one adapted for a pair, with a persona's preferences.
+ * @typedef {Omit<(typeof import('../config/rivals.js').RIVALS)[number], 'weights'> &
+ *   {weights: Record<string, number>, prefs?: import('./evaluate.js').Prefs}} PlanProfile
+ */
+
+/**
  * @typedef {object} Job
+ * @property {PlanProfile} profile what this pair is planned with
+ * @property {boolean} searched the search is finished, so the move can be picked
  * @property {Root[]} roots
  * @property {Root | null} best the best first move so far
  * @property {boolean} done
@@ -48,16 +57,26 @@ import {
  */
 
 /**
- * Starts a plan from a snapshot of a falling board.
+ * Starts a plan from a snapshot of a falling board. A rival with variety passes `after`, work to do
+ * with the units left once the search is done (it reads the boards for its next pair); the job is
+ * `searched` when the move can be picked and `done` when the extra work is finished too.
  * @param {import('./view.js').Seen} seen
- * @param {(typeof import('../config/rivals.js').RIVALS)[number]} profile
+ * @param {PlanProfile} profile
+ * @param {((seen: import('./view.js').Seen) => Generator<undefined, void, undefined>) | null} [after]
  * @returns {Job}
  */
-export function startPlan(seen, profile) {
+export function startPlan(seen, profile, after = null) {
   /** @type {Job} */
-  const job = { roots: [], best: null, done: false, units: 0, work: null };
-  job.work = search(job, seen, profile);
+  const job = { profile, roots: [], best: null, searched: false, done: false, units: 0, work: null };
+  job.work = searchThen(job, seen, profile, after);
   return job;
+}
+
+/** The search, then any extra work. */
+function* searchThen(job, seen, profile, after) {
+  yield* search(job, seen, profile);
+  job.searched = true;
+  if (after) yield* after(seen);
 }
 
 /**
@@ -82,17 +101,26 @@ export function ranked(job) {
 }
 
 /**
- * The move at a rank among the job's moves that don't top out (or the best one if all do).
+ * The move at a rank among the job's moves that don't top out (or the best one if all do). With a
+ * margin, every move rated within it of the best (at the best's depth) shares rank 0, and `tie`
+ * chooses among them; rank 1 is then the best move outside the margin.
  * @param {Job} job
  * @param {number} rank
+ * @param {number} [margin]
+ * @param {number} [tie] any non-negative integer
  * @returns {Move | null}
  */
-export function pick(job, rank) {
+export function pick(job, rank, margin = 0, tie = 0) {
   const order = ranked(job);
   const alive = order.filter((root) => root.score > FATAL);
   const list = alive.length > 0 ? alive : order;
   if (list.length === 0) return null;
-  return list[Math.min(rank, list.length - 1)].move;
+  if (margin <= 0) return list[Math.min(rank, list.length - 1)].move;
+  const top = list[0];
+  let tied = 1;
+  while (tied < list.length && list[tied].depth === top.depth && list[tied].score >= top.score - margin) tied++;
+  if (rank === 0) return list[tie % tied].move;
+  return list[Math.min(tied - 1 + rank, list.length - 1)].move;
 }
 
 /** Moves the best-so-far pointer if this root now ranks first. */
@@ -126,7 +154,7 @@ function score(job, root, depth, value) {
  * The search itself.
  * @param {Job} job
  * @param {import('./view.js').Seen} seen
- * @param {(typeof import('../config/rivals.js').RIVALS)[number]} profile
+ * @param {PlanProfile} profile
  */
 function* search(job, seen, profile) {
   const { lookahead, beam } = profile;
@@ -195,11 +223,12 @@ function* search(job, seen, profile) {
  * immediate value added to its parent's, plus the board's shape and chain setup. The chain-setup
  * probes cost a unit each.
  */
-function* expand(job, depth, board, pending, pair, base, root, { weights, fire }) {
+function* expand(job, depth, board, pending, pair, base, root, { weights, fire, prefs = null }) {
   const outcome = simulate(board, pair);
   const move = rateMove(outcome, pending, weights, fire);
-  const value = base + move.value;
-  const shape = rateShape(outcome, move.pending, weights);
+  const nudge = depth === 1 && prefs ? rateArea(pair, prefs, weights.area) : 0;
+  const value = base + move.value + nudge;
+  const shape = rateShape(outcome, move.pending, weights, prefs);
   const node = { board: outcome, pending: move.pending, value, score: shape <= FATAL ? FATAL : value + shape, root };
   score(job, root, depth, node.score);
   // A chain costs a unit per step past the first.

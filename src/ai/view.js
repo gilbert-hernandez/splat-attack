@@ -16,6 +16,7 @@ import { RULES } from '../config/rules.js';
  * @property {boolean} armed
  * @property {string} phase
  * @property {number} pairs
+ * @property {number} chain the step count of the chain now splatting (shown on screen), 0 between chains
  * @property {number} score
  * @property {{grid: number[], stains: number[], pending: number, meter: number, score: number} | null} opponent
  */
@@ -39,6 +40,7 @@ export function seen(board, opponent = null) {
     armed: board.armed,
     phase: board.phase,
     pairs: board.pairs,
+    chain: board.chain,
     score: board.score,
     opponent: opponent
       ? {
